@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+PROJECTS="$HOME/Documents"
+
+selected=$(find "$PROJECTS" -mindepth 1 -maxdepth 4 -type d | fzf)
+
+[ -z "$selected" ] && exit 0
+
+session=$(basename "$selected")
+
+tmux has-session -t "$session" 2>/dev/null
+
+if [ $? != 0 ]; then
+  tmux new-session -d -s "$session" -c "$selected"
+fi
+
+tmux switch-client -t "$session"
