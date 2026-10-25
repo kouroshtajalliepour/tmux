@@ -2,7 +2,17 @@
 
 PROJECTS="$HOME/Documents"
 
-selected=$(find "$PROJECTS" -mindepth 1 -maxdepth 4 -type d | fzf)
+selected=$(find "$PROJECTS" -mindepth 1 -maxdepth 4 -type d | fzf \
+  --prompt=" Project  " \
+  --pointer="▶" \
+  --marker="✓" \
+  --border=rounded \
+  --height=100% \
+  --layout=reverse \
+  --info=inline \
+  --preview 'ls -la --color=always {}' \
+  --preview-window=right:50%:wrap \
+  --color="bg+:#2c313c,bg:#1e222a,fg:#abb2bf,fg+:#ffffff,hl:#61afef,hl+:#61afef,border:#61afef,prompt:#61afef,pointer:#61afef,marker:#61afef,spinner:#61afef,header:#7f848e,info:#7f848e")
 
 [ -z "$selected" ] && exit 0
 
