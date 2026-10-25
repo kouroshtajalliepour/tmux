@@ -10,7 +10,7 @@ case "$mode" in
 branch)
 	branch=$(git symbolic-ref --short HEAD 2>/dev/null)
 	[ -z "$branch" ] && branch=$(git rev-parse --short HEAD 2>/dev/null)
-	printf '#[fg=#cba6f7,bold]%s#[default]' "$branch"
+	printf '#[fg=#89b4fa,bold]%s#[default]' "$branch"
 	;;
 changes)
 	staged=$(git diff --cached --name-only 2>/dev/null | wc -l)

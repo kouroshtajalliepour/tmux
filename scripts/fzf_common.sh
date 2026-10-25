@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared fzf setup for the tmux pickers (sourced, not run directly).
 
-FZF_CATPPUCCIN_COLOR='bg+:#313244,bg:#1e1e2e,fg:#cdd6f4,fg+:#ffffff,hl:#cba6f7,hl+:#cba6f7,border:#cba6f7,prompt:#cba6f7,pointer:#cba6f7,marker:#cba6f7,spinner:#cba6f7,header:#9399b2,info:#9399b2'
+FZF_CATPPUCCIN_COLOR='bg+:#313244,bg:#1e1e2e,fg:#cdd6f4,fg+:#ffffff,hl:#89b4fa,hl+:#89b4fa,border:#89b4fa,prompt:#89b4fa,pointer:#89b4fa,marker:#89b4fa,spinner:#89b4fa,header:#9399b2,info:#9399b2'
 
 # Fills FZF_VIM_NAV_ARGS with:
 #   - tab/shift-tab always move the selection down/up
