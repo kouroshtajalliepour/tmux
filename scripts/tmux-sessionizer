@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Project picker (prefix+S). Picking an existing session just switches to
-# it; picking a new project builds the standard layout:
+# Project picker (prefix+S). Sessions are named "p-<folder>" so project
+# sessions are easy to tell apart from everything else (sys, ad-hoc, ...).
+# Picking an existing session just switches to it; picking a new project
+# builds the standard layout:
 #   0:main  anchor window, yours to do whatever with
 #   7:code  8:term  9:ai (resumes/starts a claude session named
 #     "project:branch", only if that window is actually idle)
@@ -28,7 +30,7 @@ selected=$(find "$PROJECTS" -mindepth 1 -maxdepth 4 -type d | fzf \
 
 [ -z "$selected" ] && exit 0
 
-session=$(basename "$selected")
+session="p-$(basename "$selected")"
 
 tmux has-session -t "$session" 2>/dev/null
 
