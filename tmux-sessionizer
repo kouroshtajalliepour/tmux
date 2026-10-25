@@ -12,7 +12,7 @@ selected=$(find "$PROJECTS" -mindepth 1 -maxdepth 4 -type d | fzf \
   --info=inline \
   --preview 'ls -la --color=always {}' \
   --preview-window=right:50%:wrap \
-  --color="bg+:#2c313c,bg:#1e222a,fg:#abb2bf,fg+:#ffffff,hl:#61afef,hl+:#61afef,border:#61afef,prompt:#61afef,pointer:#61afef,marker:#61afef,spinner:#61afef,header:#7f848e,info:#7f848e")
+  --color="bg+:#313244,bg:#1e1e2e,fg:#cdd6f4,fg+:#ffffff,hl:#cba6f7,hl+:#cba6f7,border:#cba6f7,prompt:#cba6f7,pointer:#cba6f7,marker:#cba6f7,spinner:#cba6f7,header:#9399b2,info:#9399b2")
 
 [ -z "$selected" ] && exit 0
 
