@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# Project picker (prefix+S). Picking an existing session just switches to
+# it; picking a new project builds the standard layout:
+#   0:main  anchor window, yours to do whatever with
+#   1:code  2:term  3:ai (auto-starts `claude`)
+# prefix+B relies on windows 1/2/3 being named exactly code/term/ai.
 
 PROJECTS="$HOME/Documents"
 
@@ -21,7 +26,12 @@ session=$(basename "$selected")
 tmux has-session -t "$session" 2>/dev/null
 
 if [ $? != 0 ]; then
-  tmux new-session -d -s "$session" -c "$selected"
+  tmux new-session -d -s "$session" -n main -c "$selected"
+  tmux new-window -t "$session" -n code -c "$selected"
+  tmux new-window -t "$session" -n term -c "$selected"
+  tmux new-window -t "$session" -n ai -c "$selected"
+  tmux send-keys -t "${session}:ai" 'claude' Enter
+  tmux select-window -t "${session}:code"
 fi
 
 tmux switch-client -t "$session"
