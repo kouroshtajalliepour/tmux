@@ -1,24 +1,27 @@
 #!/usr/bin/env bash
 # prefix+B: switch branch for a whole project session at once. Only runs
-# when the session has the code/term/ai layout from scripts/tmux-sessionizer
-# — those three windows share one working tree, so switching the branch in
-# one place is enough for all of them.
+# when the session has code/term/ai windows (wherever they are) from
+# scripts/tmux-sessionizer — those three share one working tree, so
+# switching the branch in one place is enough for all of them. Also
+# relaunches the ai window onto the new branch's named claude session,
+# unless it's already busy running something.
 
 source "$(dirname "$0")/fzf_common.sh"
+source "$(dirname "$0")/project_lib.sh"
 fzf_vim_nav_args " Branch  "
 
 session=$(tmux display-message -p '#S')
 
-name1=$(tmux display-message -p -t "${session}:1" '#{window_name}' 2>/dev/null)
-name2=$(tmux display-message -p -t "${session}:2" '#{window_name}' 2>/dev/null)
-name3=$(tmux display-message -p -t "${session}:3" '#{window_name}' 2>/dev/null)
+code_idx=$(project_window_index "$session" code)
+term_idx=$(project_window_index "$session" term)
+ai_idx=$(project_window_index "$session" ai)
 
-if [ "$name1" != "code" ] || [ "$name2" != "term" ] || [ "$name3" != "ai" ]; then
-  tmux display-message "Not a project session (needs windows 1:code 2:term 3:ai)"
+if [ -z "$code_idx" ] || [ -z "$term_idx" ] || [ -z "$ai_idx" ]; then
+  tmux display-message "Not a project session (needs code/term/ai windows)"
   exit 0
 fi
 
-dir=$(tmux display-message -p -t "${session}:1" '#{pane_current_path}')
+dir=$(tmux display-message -p -t "${session}:${code_idx}" '#{pane_current_path}')
 cd "$dir" 2>/dev/null || exit 0
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
@@ -47,5 +50,7 @@ if git show-ref --verify --quiet "refs/heads/$branch"; then
 else
   git switch -c "$branch" --track "origin/$branch"
 fi
+
+"$(dirname "$0")/ai_launch.sh" "$dir" "${session}:${ai_idx}"
 
 tmux display-message "${session}: switched to ${branch}"
