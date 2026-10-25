@@ -4,8 +4,8 @@
 # window name too, and land directly on it. Project sessions (p-*) are
 # excluded entirely here, since they're ad-hoc and rebuilt on demand by
 # tmux-sessionizer, not part of the saved roster; reach those via
-# prefix+S or prefix+B instead, or prefix+v for a fuller window picker
-# that still includes a project session's own main window.
+# prefix+S or prefix+B instead, or prefix+v for tmux's own built-in
+# (unfiltered) session tree.
 source "$(dirname "$0")/fzf_common.sh"
 fzf_vim_nav_args " Window  "
 
