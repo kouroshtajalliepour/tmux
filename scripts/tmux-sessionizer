@@ -5,6 +5,9 @@
 #   1:code  2:term  3:ai (auto-starts `claude`)
 # prefix+B relies on windows 1/2/3 being named exactly code/term/ai.
 
+source "$(dirname "$0")/fzf_common.sh"
+fzf_vim_nav_args " Project  "
+
 PROJECTS="$HOME/Documents"
 
 selected=$(find "$PROJECTS" -mindepth 1 -maxdepth 4 -type d | fzf \
@@ -17,7 +20,8 @@ selected=$(find "$PROJECTS" -mindepth 1 -maxdepth 4 -type d | fzf \
   --info=inline \
   --preview 'ls -la --color=always {}' \
   --preview-window=right:50%:wrap \
-  --color="bg+:#313244,bg:#1e1e2e,fg:#cdd6f4,fg+:#ffffff,hl:#cba6f7,hl+:#cba6f7,border:#cba6f7,prompt:#cba6f7,pointer:#cba6f7,marker:#cba6f7,spinner:#cba6f7,header:#9399b2,info:#9399b2")
+  "${FZF_VIM_NAV_ARGS[@]}" \
+  --color="$FZF_CATPPUCCIN_COLOR")
 
 [ -z "$selected" ] && exit 0
 

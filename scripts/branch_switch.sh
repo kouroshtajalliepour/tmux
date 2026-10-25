@@ -4,6 +4,9 @@
 # — those three windows share one working tree, so switching the branch in
 # one place is enough for all of them.
 
+source "$(dirname "$0")/fzf_common.sh"
+fzf_vim_nav_args " Branch  "
+
 session=$(tmux display-message -p '#S')
 
 name1=$(tmux display-message -p -t "${session}:1" '#{window_name}' 2>/dev/null)
@@ -34,7 +37,8 @@ branch=$(printf '%s\n%s\n' "$local_branches" "$remote_branches" | sed '/^$/d' | 
   --height=100% \
   --layout=reverse \
   --info=inline \
-  --color="bg+:#313244,bg:#1e1e2e,fg:#cdd6f4,fg+:#ffffff,hl:#cba6f7,hl+:#cba6f7,border:#cba6f7,prompt:#cba6f7,pointer:#cba6f7,marker:#cba6f7,spinner:#cba6f7,header:#9399b2,info:#9399b2")
+  "${FZF_VIM_NAV_ARGS[@]}" \
+  --color="$FZF_CATPPUCCIN_COLOR")
 
 [ -z "$branch" ] && exit 0
 
