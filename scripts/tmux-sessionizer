@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 # Category picker. $1 = root directory, $2 = one-letter session-name
 # prefix. Lists only the IMMEDIATE children of root - never recurses
-# into a project's own internal folders - one row each:
+# into a project's own internal folders - one row each, EXCEPT: a
+# top-level entry that's neither a git repo nor a worktree container
+# (e.g. mavidahome.com, a website name holding three separate GitHub
+# repos - admin-panel/backend/frontend - not branches of one project)
+# gets treated as a wrapper: its own children are listed instead, one
+# level down, each with "$2r" as their session prefix instead of "$2"
+# (so e.g. live-websites' "l" becomes "lr" for the actual repo-level
+# sessions - see theme.conf's color scheme, which colors these two
+# differently on purpose).
+#
+# Row shapes:
 #   - a worktree-container project (api-generator-system style) expands
 #     into one row per EXISTING worktree, shown as "name:branch"
 #   - anything else (plain repo or non-git dir) is just "name"
@@ -13,9 +23,8 @@
 # prefix+B's job, not this list's.
 #
 # Either way, the built session is the standard layout:
-#   0:main  anchor window, yours to do whatever with
-#   7:code  8:term  9:ai (resumes/starts a claude session named
-#     "project:branch", only if that window is actually idle)
+#   0:repo  anchor window at the project/container root
+#   7:vi  8:tr  9:ai (idle - no auto-launched claude)
 # Windows 1-6 are left free for whatever extra terminals you add yourself.
 
 source "$(dirname "$0")/fzf_common.sh"
@@ -26,25 +35,46 @@ ROOT="${1:-$HOME/Documents}"
 PREFIX="${2:-p}"
 
 # Full path (hidden) \t display text ("name:branch" or just "name") \t
-# the bare name alone - search matches ONLY this last field, never the
-# branch, even though the branch is visible in the display text.
+# the bare name alone (search matches ONLY this field, never the
+# branch) \t the session prefix to use for this row (normally $PREFIX,
+# or $PREFIX+"r" for anything found by recursing into a wrapper folder).
 rows=""
-while IFS= read -r dir; do
+
+add_entry_rows() {
+  local dir="$1" prefix="$2" name main_dir wt_path branch child child_prefix found_any
   name=$(basename "$dir")
+
   if is_worktree_container "$dir"; then
     main_dir=$(find_main_worktree "$dir")
     while IFS= read -r wt_path; do
       [ -z "$wt_path" ] && continue
       branch=$(git -C "$wt_path" symbolic-ref --short HEAD 2>/dev/null)
       [ -z "$branch" ] && branch=$(git -C "$wt_path" rev-parse --short HEAD 2>/dev/null)
-      rows="${rows}${wt_path}"$'\t'"${name}:${branch}"$'\t'"${name}"$'\n'
+      rows="${rows}${wt_path}"$'\t'"${name}:${branch}"$'\t'"${name}"$'\t'"${prefix}"$'\n'
     done < <(git -C "$main_dir" worktree list --porcelain | awk '/^worktree /{print $2}')
+
+  elif [ -d "$dir/.git" ]; then
+    rows="${rows}${dir}"$'\t'"${name}"$'\t'"${name}"$'\t'"${prefix}"$'\n'
+
   else
-    rows="${rows}${dir}"$'\t'"${name}"$'\t'"${name}"$'\n'
+    found_any=0
+    child_prefix="${prefix}r"
+    for child in "$dir"/*/; do
+      [ -d "$child" ] || continue
+      found_any=1
+      add_entry_rows "${child%/}" "$child_prefix"
+    done
+    if [ "$found_any" -eq 0 ]; then
+      rows="${rows}${dir}"$'\t'"${name}"$'\t'"${name}"$'\t'"${prefix}"$'\n'
+    fi
   fi
+}
+
+while IFS= read -r dir; do
+  add_entry_rows "$dir" "$PREFIX"
 done < <(find "$ROOT" -mindepth 1 -maxdepth 1 -type d)
 
-selected=$(printf '%s' "$rows" | sed '/^$/d' | fzf \
+selected_line=$(printf '%s' "$rows" | sed '/^$/d' | fzf \
   --prompt=" Project  " \
   --pointer="▶" \
   --marker="✓" \
@@ -60,8 +90,10 @@ selected=$(printf '%s' "$rows" | sed '/^$/d' | fzf \
   "${FZF_VIM_NAV_ARGS[@]}" \
   --color="$FZF_CATPPUCCIN_COLOR")
 
-selected=${selected%%$'\t'*}
-[ -z "$selected" ] && exit 0
+[ -z "$selected_line" ] && exit 0
+
+selected=${selected_line%%$'\t'*}
+session_prefix=${selected_line##*$'\t'}
 
 parent=$(dirname "$selected")
 
@@ -70,7 +102,7 @@ if is_worktree_container "$parent"; then
   container="$parent"
   project_name=$(basename "$container")
   branch_dir=$(basename "$selected")
-  session="${PREFIX}-${project_name}-${branch_dir}"
+  session="${session_prefix}-${project_name}-${branch_dir}"
   build_project_session "$selected" "$session" "$project_name" "$container"
 
 elif [ -d "$selected/.git" ]; then
@@ -79,10 +111,10 @@ elif [ -d "$selected/.git" ]; then
   project_name=$(basename "$selected")
   branch_dir=$(convert_to_worktree_container "$selected")
   worktree_dir="$selected/$branch_dir"
-  session="${PREFIX}-${project_name}-${branch_dir}"
+  session="${session_prefix}-${project_name}-${branch_dir}"
   build_project_session "$worktree_dir" "$session" "$project_name" "$selected"
 
 else
-  session="${PREFIX}-$(basename "$selected")"
+  session="${session_prefix}-$(basename "$selected")"
   build_project_session "$selected" "$session" "$(basename "$selected")" "$selected"
 fi
