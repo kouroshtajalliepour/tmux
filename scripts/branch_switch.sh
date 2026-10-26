@@ -56,7 +56,8 @@ if is_worktree_container "$container"; then
     fi
   fi
 
-  new_session="p-${project_name}-${branch_dir}"
+  prefix_letter=${session%%-*}
+  new_session="${prefix_letter}-${project_name}-${branch_dir}"
   build_project_session "$worktree_dir" "$new_session" "$project_name"
   exit 0
 fi

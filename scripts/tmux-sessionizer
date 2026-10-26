@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# Project picker (prefix+S). Sessions are named "p-<folder>" so project
-# sessions are easy to tell apart from everything else (sys, ad-hoc, ...).
+# Category project picker. $1 = root directory to scan, $2 = one-letter
+# session-name prefix for whatever gets opened (e.g. "j" for Projects,
+# "l" for Packages - see category_hub.sh and the prefix+h/j/k/l bindings
+# in project.conf). Defaults to the old ~/Documents / "p" behavior if
+# called with no args.
 #
 # Projects come in two shapes:
 #   - a worktree container (no .git of its own, each branch lives in its
@@ -25,21 +28,22 @@ source "$(dirname "$0")/fzf_common.sh"
 source "$(dirname "$0")/project_lib.sh"
 fzf_vim_nav_args " Project  "
 
-PROJECTS="$HOME/Documents"
+ROOT="${1:-$HOME/Documents}"
+PREFIX="${2:-p}"
 
 candidates=()
 while IFS= read -r dir; do
   parent=$(dirname "$dir")
   is_worktree_container "$parent" && continue
   candidates+=("$dir")
-done < <(find "$PROJECTS" -mindepth 1 -maxdepth 4 -type d)
+done < <(find "$ROOT" -mindepth 1 -maxdepth 4 -type d)
 
 # Full absolute path (hidden) \t basename (what you actually search/see
-# first) \t its parent dir relative to ~/Documents (shown after, for
-# context only - searching "mavida" matches against the basename alone,
+# first) \t its parent dir relative to the root - shown after, for
+# context only. Searching "mavida" matches against the basename alone,
 # so you don't have to type through "live-websites" or whatever else
-# happens to sit in front of it).
-rows=$(printf '%s\n' "${candidates[@]}" | awk -v prefix="$PROJECTS/" '{
+# happens to sit in front of it.
+rows=$(printf '%s\n' "${candidates[@]}" | awk -v prefix="$ROOT/" '{
   rel = $0; sub("^" prefix, "", rel)
   base = rel; sub(/^.*\//, "", base)
   dir = rel; sub("/?[^/]*$", "", dir)
@@ -85,7 +89,7 @@ if is_worktree_container "$selected"; then
     fi
   fi
 
-  session="p-${project_name}-${branch_dir}"
+  session="${PREFIX}-${project_name}-${branch_dir}"
   build_project_session "$worktree_dir" "$session" "$project_name"
 
 elif [ -d "$selected/.git" ]; then
@@ -93,10 +97,10 @@ elif [ -d "$selected/.git" ]; then
   branch_dir=$(convert_to_worktree_container "$selected")
   worktree_dir="$selected/$branch_dir"
 
-  session="p-${project_name}-${branch_dir}"
+  session="${PREFIX}-${project_name}-${branch_dir}"
   build_project_session "$worktree_dir" "$session" "$project_name"
 
 else
-  session="p-$(basename "$selected")"
+  session="${PREFIX}-$(basename "$selected")"
   build_project_session "$selected" "$session" "$(basename "$selected")"
 fi
