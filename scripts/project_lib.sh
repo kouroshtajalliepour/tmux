@@ -9,30 +9,28 @@ project_window_index() {
     | awk -v n="$2" '$2 == n {print $1; exit}'
 }
 
-# True if $1 has no .git of its own but at least one child directory does
-# (either a real .git directory - a full checkout - or a .git file - a
-# linked worktree). That's a "worktree container": a project folder whose
-# branches each live in their own subdirectory, api-generator-system
-# style, rather than one shared working tree.
+# True if $1 is a "worktree container": a project folder whose branches
+# each live in their own subdirectory, api-generator-system style,
+# rather than one shared working tree.
 #
-# A real worktree setup has AT MOST ONE child with a directory .git (the
-# main checkout) - every other branch's .git is a FILE pointing back at
-# it. Two or more children with a real .git directory means this is just
-# a folder holding several unrelated repos (e.g. mavidahome.com holding
-# separate admin-panel/backend/frontend projects), not one project's
-# branches - that must NOT be treated as a worktree container.
+# Shape alone can't tell this apart from "a plain folder that happens to
+# have exactly one git-repo child" (e.g. ~/Documents/Packages itself,
+# sitting right next to vue-kit) - both look identical when there's only
+# one branch/checkout so far. So this is true only when EITHER:
+#   - a child's .git is a FILE (unambiguous - that's a real linked
+#     worktree, e.g. api-generator-system's class-api/docs/...), or
+#   - $dir/.worktree-root exists (the explicit marker convert_to_
+#     worktree_container and pclone both leave behind, for the common
+#     case of a container that's only grown its first branch so far and
+#     has no linked worktrees yet to prove it structurally).
 is_worktree_container() {
-  local dir="$1" child any_git=0 real_checkouts=0
+  local dir="$1" child
   [ -e "$dir/.git" ] && return 1
+  [ -e "$dir/.worktree-root" ] && return 0
   for child in "$dir"/*/; do
-    if [ -d "${child}.git" ]; then
-      any_git=1
-      real_checkouts=$((real_checkouts + 1))
-    elif [ -e "${child}.git" ]; then
-      any_git=1
-    fi
+    [ -f "${child}.git" ] && return 0
   done
-  [ "$any_git" -eq 1 ] && [ "$real_checkouts" -le 1 ]
+  return 1
 }
 
 # Prints the one child of a worktree container whose .git is a real
@@ -59,7 +57,7 @@ pick_or_create_branch() {
 
   local local_branches remote_branches candidates result status query selected
   local_branches=$(git -C "$main_dir" branch --format='%(refname:short)' 2>/dev/null)
-  remote_branches=$(git -C "$main_dir" branch -r --format='%(refname:short)' 2>/dev/null | grep -v 'HEAD' | sed 's#^origin/##')
+  remote_branches=$(git -C "$main_dir" branch -r --format='%(refname:short)' 2>/dev/null | grep '^origin/' | sed 's#^origin/##')
   candidates=$(printf '%s\n%s\n' "$local_branches" "$remote_branches" | sed '/^$/d' | sort -u)
 
   result=$(printf '%s\n' "$candidates" | fzf \
@@ -88,21 +86,25 @@ pick_or_create_branch() {
 }
 
 # Builds (if it doesn't already exist) the standard project window layout
-# - 0:main 7:code 8:term 9:ai - in $1, as session $2, and switches to it.
-# $3 is the project name shown in the ai window's claude session name
-# (see ai_launch.sh - for a worktree branch dir this is the container's
-# name, not the branch directory's own name).
+# - 0:repo 7:vi 8:tr 9:ai - in $1, as session $2, and switches to it.
+# $3 is the project name (unused now that ai doesn't auto-launch, kept
+# for callers/future use). $4 is repo_dir: window 0 ("repo") sits there
+# instead of $1, since for a worktree branch that's the container/project
+# root, not the specific branch's own worktree directory - defaults to
+# $1 when not given (plain non-git dirs have no such distinction).
+# Window 9 ("ai") is just an idle shell - it used to auto-launch a claude
+# session here, but every caller of this function now is a Packages/
+# live-websites session, where that's unwanted noise.
 build_project_session() {
-  local dir="$1" session="$2" project_name="$3"
+  local dir="$1" session="$2" project_name="$3" repo_dir="${4:-$1}"
 
   tmux has-session -t "$session" 2>/dev/null
   if [ $? != 0 ]; then
-    tmux new-session -d -s "$session" -n main -c "$dir"
+    tmux new-session -d -s "$session" -n repo -c "$repo_dir"
     tmux set-option -t "$session" renumber-windows off
-    tmux new-window -t "${session}:7" -n code -c "$dir"
-    tmux new-window -t "${session}:8" -n term -c "$dir"
+    tmux new-window -t "${session}:7" -n vi -c "$dir"
+    tmux new-window -t "${session}:8" -n tr -c "$dir"
     tmux new-window -t "${session}:9" -n ai -c "$dir"
-    "$(dirname "${BASH_SOURCE[0]}")/ai_launch.sh" "$dir" "${session}:9" "$project_name"
     tmux select-window -t "${session}:7"
   fi
 
@@ -113,9 +115,13 @@ build_project_session() {
 # worktree container: the currently checked-out branch's entire contents
 # (including .git, uncommitted/untracked files and all - nothing is
 # cloned fresh, just moved) go into $1/<branch-dir>/, leaving $1 itself
-# as the now-empty container. Prints the branch directory name.
+# as the now-empty container. Then fetches every remote branch and adds
+# a worktree for any that doesn't already have one, so the picker list
+# is complete from the first open, not just whatever branch you happened
+# to be on. Prints the branch directory name you were already on (the
+# one the caller should actually open right now).
 convert_to_worktree_container() {
-  local dir="$1" branch branch_dir tmp
+  local dir="$1" branch branch_dir tmp main_dir remote_branch other_branch other_dir
 
   branch=$(git -C "$dir" symbolic-ref --short HEAD 2>/dev/null)
   [ -z "$branch" ] && branch=$(git -C "$dir" rev-parse --short HEAD 2>/dev/null)
@@ -125,6 +131,21 @@ convert_to_worktree_container() {
   mv "$dir" "$tmp"
   mkdir "$dir"
   mv "$tmp" "$dir/$branch_dir"
+  touch "$dir/.worktree-root"
+
+  main_dir="$dir/$branch_dir"
+  git -C "$main_dir" fetch --quiet --all 2>/dev/null
+
+  while IFS= read -r remote_branch; do
+    [ -z "$remote_branch" ] && continue
+    other_branch="$remote_branch"
+    [ "$other_branch" = "$branch" ] && continue
+    other_dir="$dir/$(basename "$other_branch")"
+    [ -d "$other_dir" ] && continue
+    git -C "$main_dir" show-ref --verify --quiet "refs/heads/$other_branch" \
+      && git -C "$main_dir" worktree add "$other_dir" "$other_branch" \
+      || git -C "$main_dir" worktree add "$other_dir" -b "$other_branch" --track "origin/$other_branch"
+  done < <(git -C "$main_dir" branch -r --format='%(refname:short)' 2>/dev/null | grep '^origin/' | sed 's#^origin/##')
 
   tmux display-message "Converted $(basename "$dir") to worktree layout (branch: ${branch})"
   printf '%s\n' "$branch_dir"

@@ -71,18 +71,18 @@ if is_worktree_container "$parent"; then
   project_name=$(basename "$container")
   branch_dir=$(basename "$selected")
   session="${PREFIX}-${project_name}-${branch_dir}"
-  build_project_session "$selected" "$session" "$project_name"
+  build_project_session "$selected" "$session" "$project_name" "$container"
 
 elif [ -d "$selected/.git" ]; then
-  # plain single-checkout, not yet converted - convert, open the branch
-  # you were already on
+  # plain single-checkout, not yet converted - convert (fetches every
+  # remote branch too), open the branch you were already on
   project_name=$(basename "$selected")
   branch_dir=$(convert_to_worktree_container "$selected")
   worktree_dir="$selected/$branch_dir"
   session="${PREFIX}-${project_name}-${branch_dir}"
-  build_project_session "$worktree_dir" "$session" "$project_name"
+  build_project_session "$worktree_dir" "$session" "$project_name" "$selected"
 
 else
   session="${PREFIX}-$(basename "$selected")"
-  build_project_session "$selected" "$session" "$(basename "$selected")"
+  build_project_session "$selected" "$session" "$(basename "$selected")" "$selected"
 fi

@@ -9,7 +9,7 @@
 #
 # If it isn't (a plain single-checkout project that hasn't been opened
 # fresh since this changed), this keeps the original behavior: switches
-# the branch in-place, in the one shared working tree code/term/ai all
+# the branch in-place, in the one shared working tree vi/tr/ai all
 # sit in.
 
 source "$(dirname "$0")/fzf_common.sh"
@@ -17,16 +17,16 @@ source "$(dirname "$0")/project_lib.sh"
 
 session=$(tmux display-message -p '#S')
 
-code_idx=$(project_window_index "$session" code)
-term_idx=$(project_window_index "$session" term)
+vi_idx=$(project_window_index "$session" vi)
+tr_idx=$(project_window_index "$session" tr)
 ai_idx=$(project_window_index "$session" ai)
 
-if [ -z "$code_idx" ] || [ -z "$term_idx" ] || [ -z "$ai_idx" ]; then
-  tmux display-message "Not a project session (needs code/term/ai windows)"
+if [ -z "$vi_idx" ] || [ -z "$tr_idx" ] || [ -z "$ai_idx" ]; then
+  tmux display-message "Not a project session (needs vi/tr/ai windows)"
   exit 0
 fi
 
-dir=$(tmux display-message -p -t "${session}:${code_idx}" '#{pane_current_path}')
+dir=$(tmux display-message -p -t "${session}:${vi_idx}" '#{pane_current_path}')
 cd "$dir" 2>/dev/null || exit 0
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
@@ -58,7 +58,7 @@ if is_worktree_container "$container"; then
 
   prefix_letter=${session%%-*}
   new_session="${prefix_letter}-${project_name}-${branch_dir}"
-  build_project_session "$worktree_dir" "$new_session" "$project_name"
+  build_project_session "$worktree_dir" "$new_session" "$project_name" "$container"
   exit 0
 fi
 
@@ -67,7 +67,7 @@ fzf_vim_nav_args " Branch  "
 git fetch --quiet --all 2>/dev/null
 
 local_branches=$(git branch --format='%(refname:short)' 2>/dev/null)
-remote_branches=$(git branch -r --format='%(refname:short)' 2>/dev/null | grep -v 'HEAD' | sed 's#^origin/##')
+remote_branches=$(git branch -r --format='%(refname:short)' 2>/dev/null | grep '^origin/' | sed 's#^origin/##')
 
 branch=$(printf '%s\n%s\n' "$local_branches" "$remote_branches" | sed '/^$/d' | sort -u | fzf \
   --prompt=" Branch  " \
