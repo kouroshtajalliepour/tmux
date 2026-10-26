@@ -1,28 +1,22 @@
 #!/usr/bin/env bash
-# Category project picker. $1 = root directory to scan, $2 = one-letter
-# session-name prefix for whatever gets opened (e.g. "j" for Projects,
-# "l" for Packages - see category_hub.sh and the prefix+h/j/k/l bindings
-# in project.conf). Defaults to the old ~/Documents / "p" behavior if
-# called with no args.
+# Category picker. $1 = root directory, $2 = one-letter session-name
+# prefix. Lists only the IMMEDIATE children of root - never recurses
+# into a project's own internal folders - one row each:
+#   - a worktree-container project (api-generator-system style) expands
+#     into one row per EXISTING worktree, shown as "name:branch"
+#   - anything else (plain repo or non-git dir) is just "name"
+# Search only ever matches the name part, never the branch - this is a
+# fixed list to pick from, not a free-typing branch creator. A fresh
+# single-checkout repo still auto-converts to a worktree container the
+# first time you pick it (same as before, lands you on the branch you
+# were already on, no prompt). Creating a NEW branch/worktree is
+# prefix+B's job, not this list's.
 #
-# Projects come in two shapes:
-#   - a worktree container (no .git of its own, each branch lives in its
-#     own subdirectory - api-generator-system is the original example):
-#     picking it prompts for a branch (existing or brand new - cancelling
-#     does nothing at all), builds a worktree for it if needed, and opens
-#     that branch's own session.
-#   - a plain single-checkout repo: the FIRST time you pick one, it gets
-#     auto-converted into a worktree container (current branch's contents
-#     move into a branch-named subdirectory), then opens straight into
-#     that branch - no prompt needed, you were already on it. Every
-#     later pick of that project takes the worktree-container path above.
 # Either way, the built session is the standard layout:
 #   0:main  anchor window, yours to do whatever with
 #   7:code  8:term  9:ai (resumes/starts a claude session named
 #     "project:branch", only if that window is actually idle)
 # Windows 1-6 are left free for whatever extra terminals you add yourself.
-# prefix+B relies on there being windows named exactly code/term/ai
-# (wherever they end up), not on these specific indices.
 
 source "$(dirname "$0")/fzf_common.sh"
 source "$(dirname "$0")/project_lib.sh"
@@ -31,26 +25,26 @@ fzf_vim_nav_args " Project  "
 ROOT="${1:-$HOME/Documents}"
 PREFIX="${2:-p}"
 
-candidates=()
+# Full path (hidden) \t display text ("name:branch" or just "name") \t
+# the bare name alone - search matches ONLY this last field, never the
+# branch, even though the branch is visible in the display text.
+rows=""
 while IFS= read -r dir; do
-  parent=$(dirname "$dir")
-  is_worktree_container "$parent" && continue
-  candidates+=("$dir")
-done < <(find "$ROOT" -mindepth 1 -maxdepth 4 -type d)
+  name=$(basename "$dir")
+  if is_worktree_container "$dir"; then
+    main_dir=$(find_main_worktree "$dir")
+    while IFS= read -r wt_path; do
+      [ -z "$wt_path" ] && continue
+      branch=$(git -C "$wt_path" symbolic-ref --short HEAD 2>/dev/null)
+      [ -z "$branch" ] && branch=$(git -C "$wt_path" rev-parse --short HEAD 2>/dev/null)
+      rows="${rows}${wt_path}"$'\t'"${name}:${branch}"$'\t'"${name}"$'\n'
+    done < <(git -C "$main_dir" worktree list --porcelain | awk '/^worktree /{print $2}')
+  else
+    rows="${rows}${dir}"$'\t'"${name}"$'\t'"${name}"$'\n'
+  fi
+done < <(find "$ROOT" -mindepth 1 -maxdepth 1 -type d)
 
-# Full absolute path (hidden) \t basename (what you actually search/see
-# first) \t its parent dir relative to the root - shown after, for
-# context only. Searching "mavida" matches against the basename alone,
-# so you don't have to type through "live-websites" or whatever else
-# happens to sit in front of it.
-rows=$(printf '%s\n' "${candidates[@]}" | awk -v prefix="$ROOT/" '{
-  rel = $0; sub("^" prefix, "", rel)
-  base = rel; sub(/^.*\//, "", base)
-  dir = rel; sub("/?[^/]*$", "", dir)
-  printf "%s\t%s\t%s\n", $0, base, dir
-}')
-
-selected=$(printf '%s\n' "$rows" | fzf \
+selected=$(printf '%s' "$rows" | sed '/^$/d' | fzf \
   --prompt=" Project  " \
   --pointer="▶" \
   --marker="✓" \
@@ -59,8 +53,8 @@ selected=$(printf '%s\n' "$rows" | fzf \
   --layout=reverse \
   --info=inline \
   --delimiter=$'\t' \
-  --nth=2 \
-  --with-nth=2,3 \
+  --nth=3 \
+  --with-nth=2 \
   --preview 'command -v tree >/dev/null && tree -C -L 3 {1} || find {1} -maxdepth 3 | sort' \
   --preview-window=right:50%:wrap \
   "${FZF_VIM_NAV_ARGS[@]}" \
@@ -69,34 +63,22 @@ selected=$(printf '%s\n' "$rows" | fzf \
 selected=${selected%%$'\t'*}
 [ -z "$selected" ] && exit 0
 
-if is_worktree_container "$selected"; then
-  project_name=$(basename "$selected")
-  main_dir=$(find_main_worktree "$selected")
+parent=$(dirname "$selected")
 
-  branch=$(pick_or_create_branch "$main_dir")
-  [ -z "$branch" ] && exit 0
-
-  branch_dir=$(basename "$branch")
-  worktree_dir="$selected/$branch_dir"
-
-  if [ ! -d "$worktree_dir" ]; then
-    if git -C "$main_dir" show-ref --verify --quiet "refs/heads/$branch"; then
-      git -C "$main_dir" worktree add "$worktree_dir" "$branch"
-    elif git -C "$main_dir" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
-      git -C "$main_dir" worktree add "$worktree_dir" -b "$branch" --track "origin/$branch"
-    else
-      git -C "$main_dir" worktree add "$worktree_dir" -b "$branch"
-    fi
-  fi
-
+if is_worktree_container "$parent"; then
+  # an existing worktree inside a container - just build/attach it
+  container="$parent"
+  project_name=$(basename "$container")
+  branch_dir=$(basename "$selected")
   session="${PREFIX}-${project_name}-${branch_dir}"
-  build_project_session "$worktree_dir" "$session" "$project_name"
+  build_project_session "$selected" "$session" "$project_name"
 
 elif [ -d "$selected/.git" ]; then
+  # plain single-checkout, not yet converted - convert, open the branch
+  # you were already on
   project_name=$(basename "$selected")
   branch_dir=$(convert_to_worktree_container "$selected")
   worktree_dir="$selected/$branch_dir"
-
   session="${PREFIX}-${project_name}-${branch_dir}"
   build_project_session "$worktree_dir" "$session" "$project_name"
 

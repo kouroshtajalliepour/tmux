@@ -14,13 +14,25 @@ project_window_index() {
 # linked worktree). That's a "worktree container": a project folder whose
 # branches each live in their own subdirectory, api-generator-system
 # style, rather than one shared working tree.
+#
+# A real worktree setup has AT MOST ONE child with a directory .git (the
+# main checkout) - every other branch's .git is a FILE pointing back at
+# it. Two or more children with a real .git directory means this is just
+# a folder holding several unrelated repos (e.g. mavidahome.com holding
+# separate admin-panel/backend/frontend projects), not one project's
+# branches - that must NOT be treated as a worktree container.
 is_worktree_container() {
-  local dir="$1" child
+  local dir="$1" child any_git=0 real_checkouts=0
   [ -e "$dir/.git" ] && return 1
   for child in "$dir"/*/; do
-    [ -e "${child}.git" ] && return 0
+    if [ -d "${child}.git" ]; then
+      any_git=1
+      real_checkouts=$((real_checkouts + 1))
+    elif [ -e "${child}.git" ]; then
+      any_git=1
+    fi
   done
-  return 1
+  [ "$any_git" -eq 1 ] && [ "$real_checkouts" -le 1 ]
 }
 
 # Prints the one child of a worktree container whose .git is a real
