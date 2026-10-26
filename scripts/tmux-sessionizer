@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
 # Project picker (prefix+S). Sessions are named "p-<folder>" so project
 # sessions are easy to tell apart from everything else (sys, ad-hoc, ...).
-# Picking an existing session just switches to it; picking a new project
-# builds the standard layout:
+#
+# Projects come in two shapes:
+#   - a worktree container (no .git of its own, each branch lives in its
+#     own subdirectory - api-generator-system is the original example):
+#     picking it prompts for a branch (existing or brand new - cancelling
+#     does nothing at all), builds a worktree for it if needed, and opens
+#     that branch's own session.
+#   - a plain single-checkout repo: the FIRST time you pick one, it gets
+#     auto-converted into a worktree container (current branch's contents
+#     move into a branch-named subdirectory), then opens straight into
+#     that branch - no prompt needed, you were already on it. Every
+#     later pick of that project takes the worktree-container path above.
+# Either way, the built session is the standard layout:
 #   0:main  anchor window, yours to do whatever with
 #   7:code  8:term  9:ai (resumes/starts a claude session named
 #     "project:branch", only if that window is actually idle)
@@ -11,11 +22,19 @@
 # (wherever they end up), not on these specific indices.
 
 source "$(dirname "$0")/fzf_common.sh"
+source "$(dirname "$0")/project_lib.sh"
 fzf_vim_nav_args " Project  "
 
 PROJECTS="$HOME/Documents"
 
-selected=$(find "$PROJECTS" -mindepth 1 -maxdepth 4 -type d | fzf \
+candidates=()
+while IFS= read -r dir; do
+  parent=$(dirname "$dir")
+  is_worktree_container "$parent" && continue
+  candidates+=("$dir")
+done < <(find "$PROJECTS" -mindepth 1 -maxdepth 4 -type d)
+
+selected=$(printf '%s\n' "${candidates[@]}" | fzf \
   --prompt=" Project  " \
   --pointer="▶" \
   --marker="✓" \
@@ -30,18 +49,38 @@ selected=$(find "$PROJECTS" -mindepth 1 -maxdepth 4 -type d | fzf \
 
 [ -z "$selected" ] && exit 0
 
-session="p-$(basename "$selected")"
+if is_worktree_container "$selected"; then
+  project_name=$(basename "$selected")
+  main_dir=$(find_main_worktree "$selected")
 
-tmux has-session -t "$session" 2>/dev/null
+  branch=$(pick_or_create_branch "$main_dir")
+  [ -z "$branch" ] && exit 0
 
-if [ $? != 0 ]; then
-  tmux new-session -d -s "$session" -n main -c "$selected"
-  tmux set-option -t "$session" renumber-windows off
-  tmux new-window -t "${session}:7" -n code -c "$selected"
-  tmux new-window -t "${session}:8" -n term -c "$selected"
-  tmux new-window -t "${session}:9" -n ai -c "$selected"
-  "$(dirname "$0")/ai_launch.sh" "$selected" "${session}:9"
-  tmux select-window -t "${session}:7"
+  branch_dir=$(basename "$branch")
+  worktree_dir="$selected/$branch_dir"
+
+  if [ ! -d "$worktree_dir" ]; then
+    if git -C "$main_dir" show-ref --verify --quiet "refs/heads/$branch"; then
+      git -C "$main_dir" worktree add "$worktree_dir" "$branch"
+    elif git -C "$main_dir" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+      git -C "$main_dir" worktree add "$worktree_dir" -b "$branch" --track "origin/$branch"
+    else
+      git -C "$main_dir" worktree add "$worktree_dir" -b "$branch"
+    fi
+  fi
+
+  session="p-${project_name}-${branch_dir}"
+  build_project_session "$worktree_dir" "$session" "$project_name"
+
+elif [ -d "$selected/.git" ]; then
+  project_name=$(basename "$selected")
+  branch_dir=$(convert_to_worktree_container "$selected")
+  worktree_dir="$selected/$branch_dir"
+
+  session="p-${project_name}-${branch_dir}"
+  build_project_session "$worktree_dir" "$session" "$project_name"
+
+else
+  session="p-$(basename "$selected")"
+  build_project_session "$selected" "$session" "$(basename "$selected")"
 fi
-
-tmux switch-client -t "$session"

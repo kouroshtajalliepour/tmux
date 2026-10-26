@@ -3,9 +3,13 @@
 # for a project root, in the given tmux window — but only if that window
 # is actually idle. Never injects keystrokes into a window that's already
 # running something (e.g. a live claude session), since that would type
-# into it instead of running a command.
+# into it instead of running a command. $3 is an optional explicit
+# project name - needed for worktree branch dirs, where basename($1)
+# would just be the branch directory's own name again (e.g. "class-api"),
+# not the actual container project's name.
 root="$1"
 target="$2"
+project="${3:-$(basename "$root")}"
 
 cmd=$(tmux display-message -p -t "$target" '#{pane_current_command}' 2>/dev/null)
 case "$cmd" in
@@ -18,7 +22,6 @@ esac
 
 branch=$(git -C "$root" symbolic-ref --short HEAD 2>/dev/null)
 [ -z "$branch" ] && branch=$(git -C "$root" rev-parse --short HEAD 2>/dev/null)
-project=$(basename "$root")
 name="${project}:${branch:-no-branch}"
 
 marker_dir="$HOME/.cache/tmux-ai-sessions"

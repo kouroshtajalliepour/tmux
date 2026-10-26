@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
-# prefix+B: switch branch for a whole project session at once. Only runs
-# when the session has code/term/ai windows (wherever they are) from
-# scripts/tmux-sessionizer — those three share one working tree, so
-# switching the branch in one place is enough for all of them. Also
-# relaunches the ai window onto the new branch's named claude session,
-# unless it's already busy running something.
+# prefix+B: branch off the current project session.
+#
+# If the project is (or has been converted to) a worktree container, this
+# creates/attaches a sibling worktree+session for the chosen branch -
+# cancelling the branch picker does nothing at all - leaving the current
+# session's checkout untouched. That's the same path prefix+S takes for
+# a worktree-container project.
+#
+# If it isn't (a plain single-checkout project that hasn't been opened
+# fresh since this changed), this keeps the original behavior: switches
+# the branch in-place, in the one shared working tree code/term/ai all
+# sit in.
 
 source "$(dirname "$0")/fzf_common.sh"
 source "$(dirname "$0")/project_lib.sh"
-fzf_vim_nav_args " Branch  "
 
 session=$(tmux display-message -p '#S')
 
@@ -29,6 +34,35 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
   exit 0
 }
 
+container=$(dirname "$dir")
+
+if is_worktree_container "$container"; then
+  project_name=$(basename "$container")
+  main_dir=$(find_main_worktree "$container")
+
+  branch=$(pick_or_create_branch "$main_dir")
+  [ -z "$branch" ] && exit 0
+
+  branch_dir=$(basename "$branch")
+  worktree_dir="$container/$branch_dir"
+
+  if [ ! -d "$worktree_dir" ]; then
+    if git -C "$main_dir" show-ref --verify --quiet "refs/heads/$branch"; then
+      git -C "$main_dir" worktree add "$worktree_dir" "$branch"
+    elif git -C "$main_dir" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+      git -C "$main_dir" worktree add "$worktree_dir" -b "$branch" --track "origin/$branch"
+    else
+      git -C "$main_dir" worktree add "$worktree_dir" -b "$branch"
+    fi
+  fi
+
+  new_session="p-${project_name}-${branch_dir}"
+  build_project_session "$worktree_dir" "$new_session" "$project_name"
+  exit 0
+fi
+
+# plain single-checkout project: original in-place switch behavior
+fzf_vim_nav_args " Branch  "
 git fetch --quiet --all 2>/dev/null
 
 local_branches=$(git branch --format='%(refname:short)' 2>/dev/null)
@@ -51,6 +85,6 @@ else
   git switch -c "$branch" --track "origin/$branch"
 fi
 
-"$(dirname "$0")/ai_launch.sh" "$dir" "${session}:${ai_idx}"
+"$(dirname "$0")/ai_launch.sh" "$dir" "${session}:${ai_idx}" "$(basename "$dir")"
 
 tmux display-message "${session}: switched to ${branch}"
