@@ -34,9 +34,17 @@ while IFS= read -r dir; do
   candidates+=("$dir")
 done < <(find "$PROJECTS" -mindepth 1 -maxdepth 4 -type d)
 
-# show paths relative to ~/Documents (the full absolute path is still the
-# hidden first field, used for every actual operation below)
-rows=$(printf '%s\n' "${candidates[@]}" | awk -v prefix="$PROJECTS/" '{rel = $0; sub("^" prefix, "", rel); printf "%s\t%s\n", $0, rel}')
+# Full absolute path (hidden) \t basename (what you actually search/see
+# first) \t its parent dir relative to ~/Documents (shown after, for
+# context only - searching "mavida" matches against the basename alone,
+# so you don't have to type through "live-websites" or whatever else
+# happens to sit in front of it).
+rows=$(printf '%s\n' "${candidates[@]}" | awk -v prefix="$PROJECTS/" '{
+  rel = $0; sub("^" prefix, "", rel)
+  base = rel; sub(/^.*\//, "", base)
+  dir = rel; sub("/?[^/]*$", "", dir)
+  printf "%s\t%s\t%s\n", $0, base, dir
+}')
 
 selected=$(printf '%s\n' "$rows" | fzf \
   --prompt=" Project  " \
@@ -47,7 +55,8 @@ selected=$(printf '%s\n' "$rows" | fzf \
   --layout=reverse \
   --info=inline \
   --delimiter=$'\t' \
-  --with-nth=2.. \
+  --nth=2 \
+  --with-nth=2,3 \
   --preview 'command -v tree >/dev/null && tree -C -L 3 {1} || find {1} -maxdepth 3 | sort' \
   --preview-window=right:50%:wrap \
   "${FZF_VIM_NAV_ARGS[@]}" \
