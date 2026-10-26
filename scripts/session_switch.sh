@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# prefix+s: fuzzy-pick a window across your saved sessions only (not just
-# the session itself), shown as "session/window" — so you can search by
-# window name too, and land directly on it. Project sessions (p-*) are
+# prefix+s: fuzzy-pick a window by name across your saved sessions only -
+# just the window name shown, no session name prefix, so it reads like a
+# flat list of everything you've got open. Project sessions (p-*) are
 # excluded entirely here, since they're ad-hoc and rebuilt on demand by
 # tmux-sessionizer, not part of the saved roster; reach those via
 # prefix+S or prefix+B instead, or prefix+v for tmux's own built-in
@@ -13,7 +13,7 @@ current=$(tmux display-message -p '#S')
 
 rows=$(tmux list-windows -a -F '#{session_name}	#{window_index}	#{window_name}	#{window_active}' \
   | awk -F'\t' '$1 !~ /^p-/' \
-  | awk -F'\t' '{active = ($4 == 1) ? " (active)" : ""; printf "%s:%s\t%s/%s%s\n", $1, $2, $1, $3, active}')
+  | awk -F'\t' '{active = ($4 == 1) ? " (active)" : ""; printf "%s:%s\t%s%s\n", $1, $2, $3, active}')
 
 selected=$(printf '%s\n' "$rows" | fzf \
   --prompt=" Window  " \
