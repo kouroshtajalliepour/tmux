@@ -34,7 +34,11 @@ while IFS= read -r dir; do
   candidates+=("$dir")
 done < <(find "$PROJECTS" -mindepth 1 -maxdepth 4 -type d)
 
-selected=$(printf '%s\n' "${candidates[@]}" | fzf \
+# show paths relative to ~/Documents (the full absolute path is still the
+# hidden first field, used for every actual operation below)
+rows=$(printf '%s\n' "${candidates[@]}" | awk -v prefix="$PROJECTS/" '{rel = $0; sub("^" prefix, "", rel); printf "%s\t%s\n", $0, rel}')
+
+selected=$(printf '%s\n' "$rows" | fzf \
   --prompt=" Project  " \
   --pointer="▶" \
   --marker="✓" \
@@ -42,11 +46,14 @@ selected=$(printf '%s\n' "${candidates[@]}" | fzf \
   --height=100% \
   --layout=reverse \
   --info=inline \
-  --preview 'ls -la --color=always {}' \
+  --delimiter=$'\t' \
+  --with-nth=2.. \
+  --preview 'ls -la --color=always {1}' \
   --preview-window=right:50%:wrap \
   "${FZF_VIM_NAV_ARGS[@]}" \
   --color="$FZF_CATPPUCCIN_COLOR")
 
+selected=${selected%%$'\t'*}
 [ -z "$selected" ] && exit 0
 
 if is_worktree_container "$selected"; then
