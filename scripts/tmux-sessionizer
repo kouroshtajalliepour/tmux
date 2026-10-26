@@ -48,7 +48,7 @@ selected=$(printf '%s\n' "$rows" | fzf \
   --info=inline \
   --delimiter=$'\t' \
   --with-nth=2.. \
-  --preview 'ls -la --color=always {1}' \
+  --preview 'command -v tree >/dev/null && tree -C -L 3 {1} || find {1} -maxdepth 3 | sort' \
   --preview-window=right:50%:wrap \
   "${FZF_VIM_NAV_ARGS[@]}" \
   --color="$FZF_CATPPUCCIN_COLOR")
