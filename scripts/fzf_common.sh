@@ -20,6 +20,6 @@ fzf_vim_nav_args() {
     --bind "k:up"
     --bind "g:first"
     --bind "G:last"
-    --bind "esc:transform:if [ \"\$FZF_PROMPT\" = \" NAV  \" ]; then printf 'unbind(j,k,g,G)+change-prompt(${prompt})'; else printf 'rebind(j,k,g,G)+change-prompt( NAV  )'; fi"
+    --bind "esc:transform:case \"\$FZF_PROMPT\" in *NAV*) printf 'unbind(j,k,g,G)+change-prompt(${prompt})';; *) printf 'rebind(j,k,g,G)+change-prompt( NAV  )';; esac"
   )
 }
