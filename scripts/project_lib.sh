@@ -45,47 +45,6 @@ find_main_worktree() {
   return 1
 }
 
-# fzf-pick a branch of the repo at $1 (local or remote), or type a brand
-# new name to create one. Prints the chosen/typed branch name on success;
-# prints nothing and returns non-zero if the picker was cancelled
-# (Escape/Ctrl-C) - callers must treat that as "do nothing at all".
-pick_or_create_branch() {
-  local main_dir="$1"
-  fzf_vim_nav_args " Branch  "
-
-  git -C "$main_dir" fetch --quiet --all 2>/dev/null
-
-  local local_branches remote_branches candidates result status query selected
-  local_branches=$(git -C "$main_dir" branch --format='%(refname:short)' 2>/dev/null)
-  remote_branches=$(git -C "$main_dir" branch -r --format='%(refname:short)' 2>/dev/null | grep '^origin/' | sed 's#^origin/##')
-  candidates=$(printf '%s\n%s\n' "$local_branches" "$remote_branches" | sed '/^$/d' | sort -u)
-
-  result=$(printf '%s\n' "$candidates" | fzf \
-    --exact \
-    --prompt=" Branch  " \
-    --border=rounded \
-    --height=100% \
-    --layout=reverse \
-    --info=inline \
-    --print-query \
-    "${FZF_VIM_NAV_ARGS[@]}" \
-    --color="$FZF_CATPPUCCIN_COLOR")
-  status=$?
-
-  [ "$status" -eq 130 ] && return 1
-
-  query=$(printf '%s\n' "$result" | sed -n '1p')
-  selected=$(printf '%s\n' "$result" | sed -n '2p')
-
-  if [ -n "$selected" ]; then
-    printf '%s\n' "$selected"
-  elif [ -n "$query" ]; then
-    printf '%s\n' "$query"
-  else
-    return 1
-  fi
-}
-
 # Resolves the CURRENT tmux session's project context - used by
 # prefix+g/G, both of which only make sense inside a Packages/live-
 # websites session. Prints "container\tproject_name\tmain_dir\tprefix"
