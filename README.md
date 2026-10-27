@@ -9,6 +9,11 @@ typing a `cd`.
 Themed throughout in Catppuccin Mocha, color-coded by category so you always
 know what kind of session you're in from the status bar alone.
 
+> **`production` branch**: a stripped-down variant for machines that don't
+> need the project-switcher - just `prefix+s` (session switcher), no
+> category pickers, no auto-created sessions, status bar on the bottom,
+> prefix is `Ctrl+s` instead of `Ctrl+b`.
+
 ## The model
 
 Sessions fall into two kinds:
