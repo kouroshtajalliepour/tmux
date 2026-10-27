@@ -61,6 +61,7 @@ pick_or_create_branch() {
   candidates=$(printf '%s\n%s\n' "$local_branches" "$remote_branches" | sed '/^$/d' | sort -u)
 
   result=$(printf '%s\n' "$candidates" | fzf \
+    --exact \
     --prompt=" Branch  " \
     --border=rounded \
     --height=100% \

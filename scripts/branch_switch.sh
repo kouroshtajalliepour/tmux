@@ -70,6 +70,7 @@ local_branches=$(git branch --format='%(refname:short)' 2>/dev/null)
 remote_branches=$(git branch -r --format='%(refname:short)' 2>/dev/null | grep '^origin/' | sed 's#^origin/##')
 
 branch=$(printf '%s\n%s\n' "$local_branches" "$remote_branches" | sed '/^$/d' | sort -u | fzf \
+  --exact \
   --prompt=" Branch  " \
   --border=rounded \
   --height=100% \

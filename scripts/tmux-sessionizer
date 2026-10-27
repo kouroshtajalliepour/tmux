@@ -86,6 +86,7 @@ while IFS= read -r dir; do
 done < <(find "$ROOT" -mindepth 1 -maxdepth 1 -type d)
 
 selected_line=$(printf '%s' "$rows" | sed '/^$/d' | fzf \
+  --exact \
   --prompt=" Search  " \
   --pointer="▶" \
   --marker="✓" \

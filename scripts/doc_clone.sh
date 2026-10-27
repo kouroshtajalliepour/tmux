@@ -10,6 +10,7 @@ source "$(dirname "$0")/fzf_common.sh"
 fzf_vim_nav_args " Folder  "
 
 target_dir=$(find "$HOME/Documents" -mindepth 1 -maxdepth 4 -type d -not -path '*/.*' | fzf \
+  --exact \
   --prompt=" Folder  " \
   --pointer="▶" \
   --border=rounded \
@@ -42,6 +43,7 @@ if [ -z "$branches" ]; then
 fi
 
 selected=$(printf '%s\n' "$branches" | fzf \
+  --exact \
   --multi \
   --prompt=" Branches  " \
   --pointer="▶" \

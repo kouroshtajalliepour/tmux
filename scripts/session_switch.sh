@@ -16,6 +16,7 @@ rows=$(tmux list-windows -a -F '#{session_name}	#{window_index}	#{window_name}	#
   | awk -F'\t' '{active = ($4 == 1) ? " (active)" : ""; printf "%s:%s\t%s%s\n", $1, $2, $3, active}')
 
 selected=$(printf '%s\n' "$rows" | fzf \
+  --exact \
   --prompt=" Search  " \
   --pointer="▶" \
   --border=rounded \
