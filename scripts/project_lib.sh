@@ -86,6 +86,44 @@ pick_or_create_branch() {
   fi
 }
 
+# Resolves the CURRENT tmux session's project context - used by
+# prefix+g/G, both of which only make sense inside a Packages/live-
+# websites session. Prints "container\tproject_name\tmain_dir\tprefix"
+# on success; on failure, shows why via tmux display-message and
+# returns 1 - callers should just `|| exit 0` on this.
+resolve_current_project() {
+  local session vi_idx dir container project_name main_dir session_prefix
+  session=$(tmux display-message -p '#S')
+
+  case "$session" in
+  j-*|l-*|lr-*) ;;
+  *)
+    tmux display-message "Only works in a Packages/live-websites session"
+    return 1
+    ;;
+  esac
+
+  vi_idx=$(project_window_index "$session" vi)
+  if [ -z "$vi_idx" ]; then
+    tmux display-message "Not a project session (needs a vi window)"
+    return 1
+  fi
+
+  dir=$(tmux display-message -p -t "${session}:${vi_idx}" '#{pane_current_path}')
+  container=$(dirname "$dir")
+
+  if ! is_worktree_container "$container"; then
+    tmux display-message "Not a worktree-container project"
+    return 1
+  fi
+
+  project_name=$(basename "$container")
+  main_dir=$(find_main_worktree "$container")
+  session_prefix=${session%%-*}
+
+  printf '%s\t%s\t%s\t%s\n' "$container" "$project_name" "$main_dir" "$session_prefix"
+}
+
 # Builds (if it doesn't already exist) the standard project window layout
 # - 0:repo 7:vi 8:tr 9:ai - in $1, as session $2, and switches to it.
 # $3 is the project name (unused now that ai doesn't auto-launch, kept
