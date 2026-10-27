@@ -29,7 +29,7 @@
 
 source "$(dirname "$0")/fzf_common.sh"
 source "$(dirname "$0")/project_lib.sh"
-fzf_vim_nav_args " Project  "
+fzf_vim_nav_args " Search  "
 
 ROOT="${1:-$HOME/Documents}"
 PREFIX="${2:-p}"
@@ -86,7 +86,7 @@ while IFS= read -r dir; do
 done < <(find "$ROOT" -mindepth 1 -maxdepth 1 -type d)
 
 selected_line=$(printf '%s' "$rows" | sed '/^$/d' | fzf \
-  --prompt=" Project  " \
+  --prompt=" Search  " \
   --pointer="▶" \
   --marker="✓" \
   --border=rounded \

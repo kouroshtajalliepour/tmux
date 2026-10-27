@@ -7,7 +7,7 @@
 # prefix+S or prefix+B instead, or prefix+v for tmux's own built-in
 # (unfiltered) session tree.
 source "$(dirname "$0")/fzf_common.sh"
-fzf_vim_nav_args " Window  "
+fzf_vim_nav_args " Search  "
 
 current=$(tmux display-message -p '#S')
 
@@ -16,7 +16,7 @@ rows=$(tmux list-windows -a -F '#{session_name}	#{window_index}	#{window_name}	#
   | awk -F'\t' '{active = ($4 == 1) ? " (active)" : ""; printf "%s:%s\t%s%s\n", $1, $2, $3, active}')
 
 selected=$(printf '%s\n' "$rows" | fzf \
-  --prompt=" Window  " \
+  --prompt=" Search  " \
   --pointer="▶" \
   --border=rounded \
   --height=100% \
