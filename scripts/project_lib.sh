@@ -148,6 +148,14 @@ build_project_session() {
   fi
 
   tmux switch-client -t "$session"
+
+  # Remember this as the last-visited session for its category (j, or
+  # l/lr both collapse to "l"), so prefix+j/l can jump straight back
+  # here next time instead of opening the picker - see jump_last.sh.
+  local category="${session%%-*}"
+  [ "$category" = "lr" ] && category="l"
+  mkdir -p "$HOME/.cache/tmux-last-session"
+  printf '%s' "$session" > "$HOME/.cache/tmux-last-session/$category"
 }
 
 # One-time conversion of a plain single-checkout repo at $1 into a
