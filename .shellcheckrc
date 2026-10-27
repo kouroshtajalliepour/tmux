@@ -1,0 +1,4 @@
+# Every script here sources a sibling helper by relative path (fzf_common.sh,
+# project_lib.sh) - shellcheck can't resolve those without -x, which the CI
+# action doesn't pass, so SC1091 is just noise across the whole repo.
+disable=SC1091

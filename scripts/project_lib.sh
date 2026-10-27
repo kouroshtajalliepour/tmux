@@ -97,6 +97,7 @@ build_project_session() {
   local dir="$1" session="$2" project_name="$3" repo_dir="${4:-$1}"
 
   tmux has-session -t "$session" 2>/dev/null
+  # shellcheck disable=SC2181 # the has-session call above is the condition; checking inline would obscure it
   if [ $? != 0 ]; then
     tmux new-session -d -s "$session" -n repo -c "$repo_dir"
     tmux set-option -t "$session" renumber-windows off
@@ -166,6 +167,7 @@ convert_to_worktree_container() {
     [ "$other_branch" = "$branch" ] && continue
     other_dir="$dir/$(basename "$other_branch")"
     [ -d "$other_dir" ] && continue
+    # shellcheck disable=SC2015 # intentional: branch-exists-locally vs. needs-tracking-branch, not error handling
     git -C "$main_dir" show-ref --verify --quiet "refs/heads/$other_branch" \
       && git -C "$main_dir" worktree add "$other_dir" "$other_branch" \
       || git -C "$main_dir" worktree add "$other_dir" -b "$other_branch" --track "origin/$other_branch"

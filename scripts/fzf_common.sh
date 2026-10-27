@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Shared fzf setup for the tmux pickers (sourced, not run directly).
 
+# shellcheck disable=SC2034 # used by scripts that source this file, not here
 FZF_CATPPUCCIN_COLOR='bg+:#313244,bg:#1e1e2e,fg:#cdd6f4,fg+:#ffffff,hl:#89b4fa,hl+:#89b4fa,border:#89b4fa,prompt:#89b4fa,pointer:#89b4fa,marker:#89b4fa,spinner:#89b4fa,header:#9399b2,info:#9399b2'
 
 # Fills FZF_VIM_NAV_ARGS with:
@@ -12,6 +13,7 @@ FZF_CATPPUCCIN_COLOR='bg+:#313244,bg:#1e1e2e,fg:#cdd6f4,fg+:#ffffff,hl:#89b4fa,h
 # $1: the picker's normal prompt string, restored when leaving nav mode.
 fzf_vim_nav_args() {
   local prompt="$1"
+  # shellcheck disable=SC2034 # read by the caller that sourced this file, not here
   FZF_VIM_NAV_ARGS=(
     --bind "start:unbind(j,k,g,G)"
     --bind "tab:down,shift-tab:up"

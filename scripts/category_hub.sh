@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2154 # h_block/l_block/H_block/L_block are set by build_block's nameref, not visible to shellcheck
 # prefix+m: full-screen, game-controller-style hub (like tmux's own
 # clock-mode, but a D-pad instead of a clock). Every destination is a
 # solid block of its real session color - up/down/left/right each have
