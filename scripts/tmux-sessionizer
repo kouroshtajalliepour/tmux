@@ -15,12 +15,15 @@
 #   - a worktree-container project (api-generator-system style) expands
 #     into one row per EXISTING worktree, shown as "name:branch"
 #   - anything else (plain repo or non-git dir) is just "name"
-# Search only ever matches the name part, never the branch - this is a
-# fixed list to pick from, not a free-typing branch creator. A fresh
-# single-checkout repo still auto-converts to a worktree container the
-# first time you pick it (same as before, lands you on the branch you
-# were already on, no prompt). Creating a NEW branch/worktree is
-# prefix+B's job, not this list's.
+# Search matches whatever's shown (so a branch name can match too -
+# fzf's --nth re-indexes fields of the POST --with-nth-transformed line,
+# not the original row, so a separate hidden search-only field doesn't
+# work the way you'd expect; this is the simple, correct tradeoff). This
+# is a fixed list to pick from either way, not a free-typing branch
+# creator - creating a NEW branch/worktree is prefix+B's job, not this
+# list's. A fresh single-checkout repo still auto-converts to a
+# worktree container the first time you pick it (lands you on the
+# branch you were already on, no prompt).
 #
 # Either way, the built session is the standard layout:
 #   0:repo  anchor window at the project/container root
@@ -46,9 +49,8 @@ esac
 fzf_color="bg+:#313244,bg:#1e1e2e,fg:#cdd6f4,fg+:#ffffff,hl:${accent},hl+:${accent},border:${accent},prompt:${accent},pointer:${accent},marker:${accent},spinner:${accent},header:#9399b2,info:#9399b2"
 
 # Full path (hidden) \t display text ("name:branch" or just "name") \t
-# the bare name alone (search matches ONLY this field, never the
-# branch) \t the session prefix to use for this row (normally $PREFIX,
-# or $PREFIX+"r" for anything found by recursing into a wrapper folder).
+# the session prefix to use for this row (normally $PREFIX, or
+# $PREFIX+"r" for anything found by recursing into a wrapper folder).
 rows=""
 
 add_entry_rows() {
@@ -61,11 +63,11 @@ add_entry_rows() {
       [ -z "$wt_path" ] && continue
       branch=$(git -C "$wt_path" symbolic-ref --short HEAD 2>/dev/null)
       [ -z "$branch" ] && branch=$(git -C "$wt_path" rev-parse --short HEAD 2>/dev/null)
-      rows="${rows}${wt_path}"$'\t'"${name}:${branch}"$'\t'"${name}"$'\t'"${prefix}"$'\n'
+      rows="${rows}${wt_path}"$'\t'"${name}:${branch}"$'\t'"${prefix}"$'\n'
     done < <(git -C "$main_dir" worktree list --porcelain | awk '/^worktree /{print $2}')
 
   elif [ -d "$dir/.git" ]; then
-    rows="${rows}${dir}"$'\t'"${name}"$'\t'"${name}"$'\t'"${prefix}"$'\n'
+    rows="${rows}${dir}"$'\t'"${name}"$'\t'"${prefix}"$'\n'
 
   else
     found_any=0
@@ -76,7 +78,7 @@ add_entry_rows() {
       add_entry_rows "${child%/}" "$child_prefix"
     done
     if [ "$found_any" -eq 0 ]; then
-      rows="${rows}${dir}"$'\t'"${name}"$'\t'"${name}"$'\t'"${prefix}"$'\n'
+      rows="${rows}${dir}"$'\t'"${name}"$'\t'"${prefix}"$'\n'
     fi
   fi
 }
@@ -95,7 +97,6 @@ selected_line=$(printf '%s' "$rows" | sed '/^$/d' | fzf \
   --layout=reverse \
   --info=inline \
   --delimiter=$'\t' \
-  --nth=3 \
   --with-nth=2 \
   "${FZF_VIM_NAV_ARGS[@]}" \
   --color="$fzf_color")
