@@ -34,6 +34,17 @@ fzf_vim_nav_args " Project  "
 ROOT="${1:-$HOME/Documents}"
 PREFIX="${2:-p}"
 
+# Accent for this category, matching theme.conf's session colors (and
+# the popup border color set in project.conf) - the fzf UI itself
+# (pointer/highlight/border/prompt) picks this up instead of always
+# being blue.
+case "$PREFIX" in
+j) accent="#cba6f7" ;;
+l) accent="#a6e3a1" ;;
+*) accent="#89b4fa" ;;
+esac
+fzf_color="bg+:#313244,bg:#1e1e2e,fg:#cdd6f4,fg+:#ffffff,hl:${accent},hl+:${accent},border:${accent},prompt:${accent},pointer:${accent},marker:${accent},spinner:${accent},header:#9399b2,info:#9399b2"
+
 # Full path (hidden) \t display text ("name:branch" or just "name") \t
 # the bare name alone (search matches ONLY this field, never the
 # branch) \t the session prefix to use for this row (normally $PREFIX,
@@ -86,7 +97,7 @@ selected_line=$(printf '%s' "$rows" | sed '/^$/d' | fzf \
   --nth=3 \
   --with-nth=2 \
   "${FZF_VIM_NAV_ARGS[@]}" \
-  --color="$FZF_CATPPUCCIN_COLOR")
+  --color="$fzf_color")
 
 [ -z "$selected_line" ] && exit 0
 
