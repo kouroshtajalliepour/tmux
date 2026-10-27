@@ -6,7 +6,10 @@
 # there isn't one yet) and a Shift-letter block (always open the picker
 # / always jump to the fixed session) stacked on top of each other.
 # Pressing a key does the exact same thing the matching direct
-# prefix+<key> binding does (see project.conf).
+# prefix+<key> binding does (see project.conf). k/K trigger Packages
+# (not j/J) since k sits right next to l on the keyboard, same as
+# live-websites - Packages sessions still use the "j-" name prefix
+# either way, only the key that reaches them changed.
 
 red="\033[1;38;2;17;17;27;48;2;243;139;168m"
 peach="\033[1;38;2;17;17;27;48;2;250;179;135m"
@@ -49,23 +52,23 @@ gap=10
 left_col_pad=$(((cols - 2 * BW - gap) / 2))
 [ "$left_col_pad" -lt 0 ] && left_col_pad=0
 
-build_block k_block "$blue" "k" "Sys"
-build_block K_block "$pink" "K" "Media"
+build_block sys_block "$blue" "j" "Sys"
+build_block media_block "$pink" "J" "Media"
 build_block h_block "$peach" "h" "Todos (last)"
 build_block H_block "$red" "H" "Infra"
 build_block l_block "$green" "l" "live-web (last)"
 build_block L_block "$green" "L" "live-web (pick)"
-build_block j_block "$mauve" "j" "Packages (last)"
-build_block J_block "$mauve" "J" "Packages (pick)"
+build_block pkg_last_block "$mauve" "k" "Packages (last)"
+build_block pkg_pick_block "$mauve" "K" "Packages (pick)"
 
 clear
 top_gap=$(((lines - 26) / 2))
 [ "$top_gap" -lt 0 ] && top_gap=0
 for ((i = 0; i < top_gap; i++)); do printf '\n'; done
 
-# top: j/J, centered (keeps Packages next to live-websites on the
-# right, matching the j/k/l keyboard adjacency)
-print_stack j_block J_block "$center_pad"
+# top: k/K (Packages), centered - keeps it next to live-websites on the
+# right, matching k sitting right next to l on the keyboard
+print_stack pkg_last_block pkg_pick_block "$center_pad"
 printf '\n'
 
 # middle: h/H on the left, l/L on the right, same rows, side by side
@@ -73,8 +76,8 @@ for i in 0 1 2 3; do printf "%${left_col_pad}s%s%${gap}s%s\n" "" "${h_block[$i]}
 for i in 0 1 2 3; do printf "%${left_col_pad}s%s%${gap}s%s\n" "" "${H_block[$i]}" "" "${L_block[$i]}"; done
 printf '\n'
 
-# bottom: k/K, centered
-print_stack k_block K_block "$center_pad"
+# bottom: j/J (Sys/Media), centered
+print_stack sys_block media_block "$center_pad"
 printf '\n'
 printf '  press h/H/j/J/k/K/l/L, or anything else to cancel\n'
 printf '  (plain letter = last session or picker if none yet; Shift = always the picker/fixed jump)\n'
@@ -86,10 +89,10 @@ root="$(dirname "$0")"
 case "$key" in
 h) exec tmux switch-client -t Todos ;;
 H) exec tmux switch-client -t Infra ;;
-j) exec "$root/jump_last.sh" j "$HOME/Documents/Packages" j " Packages " "#cba6f7" ;;
-J) exec "$root/tmux-sessionizer" "$HOME/Documents/Packages" j ;;
-k) exec tmux switch-client -t Sys ;;
-K) exec tmux switch-client -t Media ;;
+j) exec tmux switch-client -t Sys ;;
+J) exec tmux switch-client -t Media ;;
+k) exec "$root/jump_last.sh" j "$HOME/Documents/Packages" j " Packages " "#cba6f7" ;;
+K) exec "$root/tmux-sessionizer" "$HOME/Documents/Packages" j ;;
 l) exec "$root/jump_last.sh" l "$HOME/Documents/Projects/live-websites" l " live-websites " "#a6e3a1" ;;
 L) exec "$root/tmux-sessionizer" "$HOME/Documents/Projects/live-websites" l ;;
 *) exit 0 ;;
