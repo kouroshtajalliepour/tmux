@@ -147,6 +147,14 @@ build_project_session() {
     tmux select-window -t "${session}:7"
   fi
 
+  # Left side of the status bar shows this instead of the raw session
+  # name ("j-api-generator-system-develop") - just the project name, no
+  # prefix, no branch (the branch already shows on the right via
+  # git_status.sh, no need to repeat it on the left too).
+  if [ -n "$project_name" ]; then
+    tmux set-option -t "$session" @display_name "$project_name"
+  fi
+
   tmux switch-client -t "$session"
 
   # Remember this as the last-visited session for its category (j, or
