@@ -156,6 +156,16 @@ build_project_session() {
   [ "$category" = "lr" ] && category="l"
   mkdir -p "$HOME/.cache/tmux-last-session"
   printf '%s' "$session" > "$HOME/.cache/tmux-last-session/$category"
+
+  # Remember this as the last branch worked on for THIS project (keyed
+  # by project name, e.g. api-generator-system, mavidahome-backend) -
+  # lets the main picker collapse a multi-branch project down to one
+  # row that reopens wherever you left off, instead of listing every
+  # branch (that's prefix+g/G's job now).
+  if [ -n "$project_name" ]; then
+    mkdir -p "$HOME/.cache/tmux-last-branch"
+    printf '%s' "$dir" > "$HOME/.cache/tmux-last-branch/$project_name"
+  fi
 }
 
 # One-time conversion of a plain single-checkout repo at $1 into a

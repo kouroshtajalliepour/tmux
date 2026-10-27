@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Category picker. $1 = root directory, $2 = one-letter session-name
 # prefix. Lists only the IMMEDIATE children of root - never recurses
-# into a project's own internal folders - one row each, EXCEPT: a
-# top-level entry that's neither a git repo nor a worktree container
+# into a project's own internal folders - one row per PROJECT, EXCEPT:
+# a top-level entry that's neither a git repo nor a worktree container
 # (e.g. mavidahome.com, a website name holding three separate GitHub
 # repos - admin-panel/backend/frontend - not branches of one project)
 # gets treated as a wrapper: its own children are listed instead, one
@@ -11,19 +11,13 @@
 # sessions - see theme.conf's color scheme, which colors these two
 # differently on purpose).
 #
-# Row shapes:
-#   - a worktree-container project (api-generator-system style) expands
-#     into one row per EXISTING worktree, shown as "name:branch"
-#   - anything else (plain repo or non-git dir) is just "name"
-# Search matches whatever's shown (so a branch name can match too -
-# fzf's --nth re-indexes fields of the POST --with-nth-transformed line,
-# not the original row, so a separate hidden search-only field doesn't
-# work the way you'd expect; this is the simple, correct tradeoff). This
-# is a fixed list to pick from either way, not a free-typing branch
-# creator - creating a NEW branch/worktree is prefix+B's job, not this
-# list's. A fresh single-checkout repo still auto-converts to a
-# worktree container the first time you pick it (lands you on the
-# branch you were already on, no prompt).
+# One row per project, not one row per branch - a worktree-container
+# project (api-generator-system style) opens whichever branch you last
+# worked on there (falling back to its main branch if you never have),
+# since picking a SPECIFIC branch is prefix+g/G's job, not this list's;
+# most of the time you just want back into the project. A fresh
+# single-checkout repo still auto-converts to a worktree container the
+# first time you pick it (lands you on the branch you were already on).
 #
 # Either way, the built session is the standard layout:
 #   0:repo  anchor window at the project/container root
@@ -48,25 +42,16 @@ l) accent="#a6e3a1" ;;
 esac
 fzf_color="bg+:#313244,bg:#1e1e2e,fg:#cdd6f4,fg+:#ffffff,hl:${accent},hl+:${accent},border:${accent},prompt:${accent},pointer:${accent},marker:${accent},spinner:${accent},header:#9399b2,info:#9399b2"
 
-# Full path (hidden) \t display text ("name:branch" or just "name") \t
-# the session prefix to use for this row (normally $PREFIX, or
-# $PREFIX+"r" for anything found by recursing into a wrapper folder).
+# Full path (hidden) \t name \t the session prefix to use for this row
+# (normally $PREFIX, or $PREFIX+"r" for anything found by recursing
+# into a wrapper folder).
 rows=""
 
 add_entry_rows() {
-  local dir="$1" prefix="$2" name main_dir wt_path branch child child_prefix found_any
+  local dir="$1" prefix="$2" name child child_prefix found_any
   name=$(basename "$dir")
 
-  if is_worktree_container "$dir"; then
-    main_dir=$(find_main_worktree "$dir")
-    while IFS= read -r wt_path; do
-      [ -z "$wt_path" ] && continue
-      branch=$(git -C "$wt_path" symbolic-ref --short HEAD 2>/dev/null)
-      [ -z "$branch" ] && branch=$(git -C "$wt_path" rev-parse --short HEAD 2>/dev/null)
-      rows="${rows}${wt_path}"$'\t'"${name}:${branch}"$'\t'"${prefix}"$'\n'
-    done < <(git -C "$main_dir" worktree list --porcelain | awk '/^worktree /{print $2}')
-
-  elif [ -d "$dir/.git" ]; then
+  if is_worktree_container "$dir" || [ -d "$dir/.git" ]; then
     rows="${rows}${dir}"$'\t'"${name}"$'\t'"${prefix}"$'\n'
 
   else
@@ -106,15 +91,21 @@ selected_line=$(printf '%s' "$rows" | sed '/^$/d' | fzf \
 selected=${selected_line%%$'\t'*}
 session_prefix=${selected_line##*$'\t'}
 
-parent=$(dirname "$selected")
-
-if is_worktree_container "$parent"; then
-  # an existing worktree inside a container - just build/attach it
-  container="$parent"
+if is_worktree_container "$selected"; then
+  container="$selected"
   project_name=$(basename "$container")
-  branch_dir=$(basename "$selected")
+  main_dir=$(find_main_worktree "$container")
+
+  worktree_dir="$main_dir"
+  last_branch_file="$HOME/.cache/tmux-last-branch/$project_name"
+  if [ -f "$last_branch_file" ]; then
+    recorded=$(cat "$last_branch_file")
+    [ -d "$recorded" ] && worktree_dir="$recorded"
+  fi
+
+  branch_dir=$(basename "$worktree_dir")
   session="${session_prefix}-${project_name}-${branch_dir}"
-  build_project_session "$selected" "$session" "$project_name" "$container"
+  build_project_session "$worktree_dir" "$session" "$project_name" "$container"
 
 elif [ -d "$selected/.git" ]; then
   # plain single-checkout, not yet converted - convert (fetches every
