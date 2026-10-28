@@ -125,6 +125,15 @@ build_project_session() {
   mkdir -p "$HOME/.cache/tmux-last-session"
   printf '%s' "$session" > "$HOME/.cache/tmux-last-session/$category"
 
+  # Also remember which PROJECT that was (not just the session name) -
+  # jump_last.sh needs this directly, since session names can't be split
+  # back into project_name/branch_dir unambiguously (either can contain
+  # hyphens).
+  if [ -n "$project_name" ]; then
+    mkdir -p "$HOME/.cache/tmux-last-session-project"
+    printf '%s' "$project_name" > "$HOME/.cache/tmux-last-session-project/$category"
+  fi
+
   # Remember this as the last branch worked on for THIS project (keyed
   # by project name, e.g. api-generator-system, mavidahome-backend) -
   # lets the main picker collapse a multi-branch project down to one

@@ -46,13 +46,17 @@ fzf_color="bg+:#313244,bg:#1e1e2e,fg:#cdd6f4,fg+:#ffffff,hl:${accent},hl+:${acce
 # (normally $PREFIX, or $PREFIX+"r" for anything found by recursing
 # into a wrapper folder).
 rows=""
+row_count=0
 
 add_entry_rows() {
   local dir="$1" prefix="$2" name child child_prefix found_any
   name=$(basename "$dir")
 
   if is_worktree_container "$dir" || [ -d "$dir/.git" ]; then
-    rows="${rows}${dir}"$'\t'"${name}"$'\t'"${prefix}"$'\n'
+    # Number on the left matches NAV mode's 1-9 quick-select keys (see
+    # fzf_common.sh) - press the number to jump straight to that row.
+    row_count=$((row_count + 1))
+    rows="${rows}${dir}"$'\t'"$(printf '%d  %s' "$row_count" "$name")"$'\t'"${prefix}"$'\n'
 
   else
     found_any=0
@@ -63,7 +67,8 @@ add_entry_rows() {
       add_entry_rows "${child%/}" "$child_prefix"
     done
     if [ "$found_any" -eq 0 ]; then
-      rows="${rows}${dir}"$'\t'"${name}"$'\t'"${prefix}"$'\n'
+      row_count=$((row_count + 1))
+      rows="${rows}${dir}"$'\t'"$(printf '%d  %s' "$row_count" "$name")"$'\t'"${prefix}"$'\n'
     fi
   fi
 }
