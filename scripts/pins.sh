@@ -7,10 +7,11 @@
 # opening a pin whose session is gone rebuilds it via build_project_session.
 #
 #   toggle      pin/unpin the current session
-#   pick        prefix+g picker over the pins (ctrl-x unpins the row;
+#   pick        prefix+f picker (outside the main 4) over the pins (ctrl-x unpins the row;
 #               pins whose directory is gone are pruned on open)
 #   destroy     switch to Sys and kill the current session (pins untouched)
 #   rows|unpin  internal, used by the picker's reload/ctrl-x
+#   open <s>    switch to pin <s>, rebuilding it if needed (last_session.sh)
 
 source "$(dirname "$0")/project_lib.sh"
 
@@ -138,4 +139,5 @@ destroy)
 
 rows) rows ;;
 unpin) unpin "$2" ;;
+open) open_pin "$2" ;;
 esac

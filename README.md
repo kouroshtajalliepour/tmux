@@ -33,11 +33,11 @@ Sessions fall into two kinds:
   post-save hook, `scripts/resurrect_filter.sh`, strips everything else
   from each save).
 
-Any session can be **pinned** (`prefix+a`); `prefix+g` lists the pins. Pins outlive their sessions -
+Any session can be **pinned** (`prefix+a`); `prefix+f` from a code session lists the pins. Pins outlive their sessions -
 opening one that isn't running rebuilds it. Anything opened through the
 Packages/live-websites pickers is pinned automatically, and a pin whose
 project directory is gone (and whose session isn't running) is dropped
-the next time `prefix+g` opens. `prefix+j`/`prefix+k` cycle the running
+the next time that list opens. `prefix+j`/`prefix+k` cycle the running
 pins. `prefix+X` self-destructs the current session and drops you back
 on Sys.
 
@@ -70,12 +70,13 @@ free for whatever you add yourself.
 | `prefix+H` / `prefix+J` | Infra / Media (fixed) |
 | `prefix+K` | Packages picker, always |
 | `prefix+L` | live-websites picker, always |
-| `prefix+g` | Pinned sessions picker (`ctrl-x` unpins) |
+| `prefix+f` | Find: in the main 4, a window of the main 4; anywhere else, the pinned sessions (`ctrl-x` unpins) |
+| `prefix+p` | Back and forth between the last main session and the last code session |
+| `prefix+n` | tmux's own find-window |
 | `prefix+a` | Pin/unpin the current session |
 | `prefix+N` / `prefix+P` | Next / previous branch of the current project |
 | `prefix+X` | Kill the current session, back to Sys |
 | `prefix+m` | Full-screen D-pad hub - h Todos, H Infra, j Sys, J Media, k/K Packages (last project's branch picker / picker), l/L live-websites |
-| `prefix+s` | Fuzzy session switcher |
 | `prefix+v` | tmux's own built-in session tree |
 
 ## Structure
@@ -86,7 +87,7 @@ free for whatever you add yourself.
   the shared worktree/session logic; `tmux-sessionizer`, `category_hub.sh`,
   `branch_picker.sh`, `jump_last.sh`, `session_switch.sh`, `pins.sh` are
   the individual pickers (`branch_cycle.sh` is prefix+N/P, `session_cycle.sh`
-  prefix+j/k, `dropdown.sh` the alt+\` drop-down); `fzf_common.sh` centralizes the fzf styling and
+  prefix+j/k, `last_session.sh` prefix+p, `dropdown.sh` the alt+\` drop-down); `fzf_common.sh` centralizes the fzf styling and
   vim-motion nav mode shared by all of them.
 - `plugins/` - vendored (tpm, tmux-resurrect, tmux-continuum) - not mine,
   not covered by this repo's CI.

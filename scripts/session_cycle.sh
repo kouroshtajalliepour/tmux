@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # prefix+j / prefix+k: next / previous session, depending on where you are:
 #   - in one of the main 4 (Sys/Infra/Media/Todos): cycle the main 4
-#   - anywhere else: cycle the pinned sessions (pins.sh, prefix+g) that
+#   - anywhere else: cycle the pinned sessions (pins.sh, prefix+f) that
 #     are running, in pin order, skipping the main 4
 # Wraps around both ways. From a session that isn't in the list, next
 # goes to the first entry and prev to the last. Shows "pin 2/5: name" /

@@ -221,7 +221,7 @@ is_main_session() {
   return 1
 }
 
-# Pinned sessions (pins.sh, prefix+g/a). One per line:
+# Pinned sessions (pins.sh, prefix+f/a). One per line:
 #   session<TAB>project_dir<TAB>project_name<TAB>repo_dir
 PIN_FILE="$HOME/.cache/tmux-pinned"
 
