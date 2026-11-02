@@ -46,7 +46,7 @@ find_main_worktree() {
 }
 
 # Resolves the CURRENT tmux session's project context - used by
-# prefix+g/G, both of which only make sense inside a Packages/live-
+# branch_picker.sh, which only makes sense inside a Packages/live-
 # websites session. Prints "container\tproject_name\tmain_dir\tprefix"
 # on success; on failure, shows why via tmux display-message and
 # returns 1 - callers should just `|| exit 0` on this.
@@ -83,6 +83,12 @@ resolve_current_project() {
   printf '%s\t%s\t%s\t%s\n' "$container" "$project_name" "$main_dir" "$session_prefix"
 }
 
+# True if any window of session $1 has activity_monitor.sh's @done flag
+# (it was busy, then went still while you weren't looking at it).
+session_done() {
+  tmux list-windows -t "=$1" -F '#{@done}' 2>/dev/null | grep -q 1
+}
+
 # Builds (if it doesn't already exist) the standard project window layout
 # - 0:repo 7:vi 8:tr 9:ai - in $1, as session $2, and switches to it.
 # $3 is the project name (unused now that ai doesn't auto-launch, kept
@@ -93,10 +99,23 @@ resolve_current_project() {
 # Window 9 ("ai") is just an idle shell - it used to auto-launch a claude
 # session here, but every caller of this function now is a Packages/
 # live-websites session, where that's unwanted noise.
-build_project_session() {
-  local dir="$1" session="$2" project_name="$3" repo_dir="${4:-$1}"
+# Repo name for branch dir $1: the worktree container's name if $1 is one
+# of its branches (".../tmux/master" -> "tmux"), else $1's own name. Used
+# for @display_name (the status bar's left pill) when a caller - e.g. an
+# old pin saved without a project name - doesn't pass one.
+project_display_name() {
+  local parent
+  parent=$(dirname "$1")
+  if is_worktree_container "$parent"; then basename "$parent"; else basename "$1"; fi
+}
 
-  tmux has-session -t "$session" 2>/dev/null
+build_project_session() {
+  local dir="$1" session="$2" project_name="${3:-$(project_display_name "$1")}" repo_dir="${4:-$1}"
+  # tmux reads "." and ":" in a target as window/pane ("release-0.1.0" -> pane "1.0"), so a
+  # session named with them can't be switched to: use "_" like branch_picker.sh does
+  session=${session//[.:]/_}
+
+  tmux has-session -t "=$session" 2>/dev/null
   # shellcheck disable=SC2181 # the has-session call above is the condition; checking inline would obscure it
   if [ $? != 0 ]; then
     tmux new-session -d -s "$session" -n repo -c "$repo_dir"
@@ -115,7 +134,13 @@ build_project_session() {
     tmux set-option -t "$session" @display_name "$project_name"
   fi
 
-  tmux switch-client -t "$session"
+  # Everything needed to rebuild this exact session later - pins.sh
+  # stores these when you pin it, so a pinned session that's since been
+  # killed (or never restored after a restart) can be rebuilt on demand.
+  tmux set-option -t "$session" @project_dir "$dir"
+  tmux set-option -t "$session" @repo_dir "$repo_dir"
+
+  tmux switch-client -t "=$session"
 
   # Remember this as the last-visited session for its category (j, or
   # l/lr both collapse to "l"), so prefix+j/l can jump straight back
@@ -138,7 +163,7 @@ build_project_session() {
   # by project name, e.g. api-generator-system, mavidahome-backend) -
   # lets the main picker collapse a multi-branch project down to one
   # row that reopens wherever you left off, instead of listing every
-  # branch (that's prefix+g/G's job now).
+  # branch (that's prefix+k/l's job now).
   if [ -n "$project_name" ]; then
     mkdir -p "$HOME/.cache/tmux-last-branch"
     printf '%s' "$dir" > "$HOME/.cache/tmux-last-branch/$project_name"
@@ -184,4 +209,37 @@ convert_to_worktree_container() {
 
   tmux display-message "Converted $(basename "$dir") to worktree layout (branch: ${branch})"
   printf '%s\n' "$branch_dir"
+}
+
+# The 4 hand-maintained sessions (see bootstrap_sys.sh). prefix+j/k
+# cycles these when you're in one of them (session_cycle.sh), and they're
+# never auto-killed by pins.sh destroy.
+MAIN_SESSIONS="Sys Infra Media Todos"
+
+is_main_session() {
+  case " $MAIN_SESSIONS " in *" $1 "*) return 0 ;; esac
+  return 1
+}
+
+# Pinned sessions (pins.sh, prefix+g/a). One per line:
+#   session<TAB>project_dir<TAB>project_name<TAB>repo_dir
+PIN_FILE="$HOME/.cache/tmux-pinned"
+
+pinned() {
+  [ -f "$PIN_FILE" ] || return 1
+  awk -F'\t' -v s="$1" '$1 == s {found = 1} END {exit !found}' "$PIN_FILE"
+}
+
+# Pins session $1 (dir $2, project name $3, repo dir $4) unless it's
+# already pinned. Same "." / ":" -> "_" rule as build_project_session,
+# so the pin names the session tmux actually has. The pickers
+# (tmux-sessionizer, branch_picker.sh) call this right after building a
+# session, so anything opened through prefix+m k/l or prefix+K/L is
+# pinned automatically.
+pin_add() {
+  local session="${1//[.:]/_}"
+  mkdir -p "$(dirname "$PIN_FILE")"
+  touch "$PIN_FILE"
+  pinned "$session" && return 0
+  printf '%s\t%s\t%s\t%s\n' "$session" "$2" "$3" "$4" >> "$PIN_FILE"
 }

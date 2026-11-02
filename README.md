@@ -24,10 +24,37 @@ Sessions fall into two kinds:
   branch lives in its own subdirectory as a real `git worktree`, not a
   single checkout you keep switching inside. Picking a project reopens
   whichever branch you last worked on there; picking a *specific* branch is
-  a separate command (`prefix+g`), not the main list's job.
-- **Fixed sessions** (Sys, Media, Todos, Infra) - four hand-maintained
-  sessions you jump straight to, kept alive across restarts by
-  tmux-resurrect/continuum.
+  a separate command (`prefix+k`/`prefix+l`), not the main list's job.
+  These are **not** saved across restarts - they're rebuilt on demand, so
+  boot only pays for the four fixed sessions.
+- **Fixed sessions** (Sys, Media, Todos, Infra) - four sessions you jump
+  straight to. `bootstrap_sys.sh` creates any that are missing, and
+  tmux-resurrect/continuum keep their contents across restarts (a
+  post-save hook, `scripts/resurrect_filter.sh`, strips everything else
+  from each save).
+
+Any session can be **pinned** (`prefix+a`); `prefix+g` lists the pins. Pins outlive their sessions -
+opening one that isn't running rebuilds it. Anything opened through the
+Packages/live-websites pickers is pinned automatically, and a pin whose
+project directory is gone (and whose session isn't running) is dropped
+the next time `prefix+g` opens. `prefix+j`/`prefix+k` cycle the running
+pins. `prefix+X` self-destructs the current session and drops you back
+on Sys.
+
+The status bar's left pill shows a project session by its repo name
+(`tmux`, not `j-tmux-master`).
+
+The i3 **alt+\` drop-down** (`~/.config/i3/scripts/toggle_scratch.sh` ->
+`scripts/dropdown.sh`) remembers the session you last chose in it: the
+first time it opens the `prefix+m` hub, and wherever you go from there
+becomes its session. Press `prefix+m` inside it to choose again. It's
+the real session, not a copy, so it mirrors the main terminal.
+
+A window gets a trailing `*` in the status bar (and its session a `*` in
+the pickers) when something in it was busy - output moving for a few
+seconds - and then went still while you weren't looking at it.
+`scripts/activity_monitor.sh` polls for this in the background; focusing
+the window clears it.
 
 Every project session gets the same window layout: `0:repo` (anchored at
 the project root), `7:vi`, `8:tr`, `9:ai` - built by
@@ -38,14 +65,16 @@ free for whatever you add yourself.
 
 | Key | Destination |
 |---|---|
-| `prefix+h` / `prefix+H` | Todos / Infra (fixed) |
-| `prefix+j` / `prefix+J` | Sys / Media (fixed) |
-| `prefix+k` | Packages - last-visited session, or the picker if none yet |
+| `prefix+h` / `prefix+l` | Previous / next window |
+| `prefix+j` / `prefix+k` | Next / previous session: the main 4 when you're in one of them, otherwise the running pins (main 4 skipped) |
+| `prefix+H` / `prefix+J` | Infra / Media (fixed) |
 | `prefix+K` | Packages picker, always |
-| `prefix+l` | live-websites - last-visited session, or the picker if none yet |
 | `prefix+L` | live-websites picker, always |
-| `prefix+g` | Switch to an already-cloned sibling branch of the current project |
-| `prefix+m` | Full-screen D-pad hub - the above, as one screen |
+| `prefix+g` | Pinned sessions picker (`ctrl-x` unpins) |
+| `prefix+a` | Pin/unpin the current session |
+| `prefix+N` / `prefix+P` | Next / previous branch of the current project |
+| `prefix+X` | Kill the current session, back to Sys |
+| `prefix+m` | Full-screen D-pad hub - h Todos, H Infra, j Sys, J Media, k/K Packages (last project's branch picker / picker), l/L live-websites |
 | `prefix+s` | Fuzzy session switcher |
 | `prefix+v` | tmux's own built-in session tree |
 
@@ -55,8 +84,9 @@ free for whatever you add yourself.
   `theme.conf`, `general.conf`, `bindings.conf`).
 - `scripts/` - everything project.conf shells out to. `project_lib.sh` holds
   the shared worktree/session logic; `tmux-sessionizer`, `category_hub.sh`,
-  `sibling_branches.sh`, `jump_last.sh`, `session_switch.sh` are the
-  individual pickers; `fzf_common.sh` centralizes the fzf styling and
+  `branch_picker.sh`, `jump_last.sh`, `session_switch.sh`, `pins.sh` are
+  the individual pickers (`branch_cycle.sh` is prefix+N/P, `session_cycle.sh`
+  prefix+j/k, `dropdown.sh` the alt+\` drop-down); `fzf_common.sh` centralizes the fzf styling and
   vim-motion nav mode shared by all of them.
 - `plugins/` - vendored (tpm, tmux-resurrect, tmux-continuum) - not mine,
   not covered by this repo's CI.

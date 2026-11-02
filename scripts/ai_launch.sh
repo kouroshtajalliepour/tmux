@@ -13,7 +13,7 @@ project="${3:-$(basename "$root")}"
 
 cmd=$(tmux display-message -p -t "$target" '#{pane_current_command}' 2>/dev/null)
 case "$cmd" in
-bash | zsh | sh | "") ;;
+bash | zsh | sh | fish | "") ;;
 *)
   tmux display-message "ai window is busy (running ${cmd}), left it alone"
   exit 0

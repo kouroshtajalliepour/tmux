@@ -3,20 +3,18 @@
 # just listing one project's already-cloned branches instead of every
 # project. Each row shows its quick-select number on the left (in NAV
 # mode, see fzf_common.sh, press that number to jump straight to it) and
-# a "*" once activity_monitor.sh has marked that branch's ai window
-# finished.
+# a "*" once activity_monitor.sh has marked one of that branch's windows
+# finished (see project_lib.sh's session_done).
 #
-# No args: the project you're currently in (prefix+g - only works from a
-# j-/l-/lr- session).
+# No args: the project you're currently in (only works from a j-/l-/lr-
+# session).
 # $1 + $2 (project_name, session_prefix): a specific project instead -
-# used by jump_last.sh for prefix+k/l, scoped to the last project you
+# used by jump_last.sh for prefix+m k/l, scoped to the last project you
 # were in for that category, so you don't have to already be in it.
 
 source "$(dirname "$0")/fzf_common.sh"
 source "$(dirname "$0")/project_lib.sh"
 fzf_vim_nav_args " Search  "
-
-DONE_DIR="$HOME/.cache/tmux-session-done"
 
 if [ -n "$1" ] && [ -n "$2" ]; then
   project_name="$1"
@@ -44,8 +42,10 @@ while IFS= read -r wt_path; do
   [ -z "$branch" ] && branch=$(git -C "$wt_path" rev-parse --short HEAD 2>/dev/null)
 
   session="${session_prefix}-${project_name}-$(basename "$wt_path")"
+  # tmux turns "." and ":" in session names into "_" (e.g. branch v1.2)
+  session=${session//[.:]/_}
   marker=""
-  [ -f "$DONE_DIR/$session" ] && marker=" *"
+  session_done "$session" && marker=" *"
 
   rows="${rows}${wt_path}"$'\t'"$(printf '%d  %s%s' "$i" "$branch" "$marker")"$'\n'
 done < <(git -C "$main_dir" worktree list --porcelain | awk '/^worktree /{print $2}')
@@ -71,3 +71,5 @@ branch_dir=$(basename "$selected")
 
 new_session="${session_prefix}-${project_name}-${branch_dir}"
 build_project_session "$selected" "$new_session" "$project_name" "$container"
+# Opened through prefix+m k/l: pin it automatically (see pins.sh).
+pin_add "$new_session" "$selected" "$project_name" "$container"

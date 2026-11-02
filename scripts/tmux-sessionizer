@@ -14,7 +14,7 @@
 # One row per project, not one row per branch - a worktree-container
 # project (api-generator-system style) opens whichever branch you last
 # worked on there (falling back to its main branch if you never have),
-# since picking a SPECIFIC branch is prefix+g/G's job, not this list's;
+# since picking a SPECIFIC branch is prefix+k/l's job, not this list's;
 # most of the time you just want back into the project. A fresh
 # single-checkout repo still auto-converts to a worktree container the
 # first time you pick it (lands you on the branch you were already on).
@@ -110,7 +110,7 @@ if is_worktree_container "$selected"; then
 
   branch_dir=$(basename "$worktree_dir")
   session="${session_prefix}-${project_name}-${branch_dir}"
-  build_project_session "$worktree_dir" "$session" "$project_name" "$container"
+  repo_dir="$container"
 
 elif [ -d "$selected/.git" ]; then
   # plain single-checkout, not yet converted - convert (fetches every
@@ -119,9 +119,16 @@ elif [ -d "$selected/.git" ]; then
   branch_dir=$(convert_to_worktree_container "$selected")
   worktree_dir="$selected/$branch_dir"
   session="${session_prefix}-${project_name}-${branch_dir}"
-  build_project_session "$worktree_dir" "$session" "$project_name" "$selected"
+  repo_dir="$selected"
 
 else
-  session="${session_prefix}-$(basename "$selected")"
-  build_project_session "$selected" "$session" "$(basename "$selected")" "$selected"
+  project_name=$(basename "$selected")
+  worktree_dir="$selected"
+  session="${session_prefix}-${project_name}"
+  repo_dir="$selected"
 fi
+
+build_project_session "$worktree_dir" "$session" "$project_name" "$repo_dir"
+# Anything opened through this picker (prefix+K/L, or prefix+m k/l when
+# there's no last project yet) is pinned automatically - see pins.sh.
+pin_add "$session" "$worktree_dir" "$project_name" "$repo_dir"

@@ -6,8 +6,10 @@
 # a plain-letter block (jump to last session, or open the picker if
 # there isn't one yet) and a Shift-letter block (always open the picker
 # / always jump to the fixed session) stacked on top of each other.
-# Pressing a key does the exact same thing the matching direct
-# prefix+<key> binding does (see project.conf). k/K trigger Packages
+# This is the home of the direct jumps now: plain prefix+h/j/k/l are
+# window/session navigation (see project.conf), only the Shift keys
+# (prefix+H/J/K/L) still do the same as here without the hub. Sessions
+# opened through k/K/l/L are pinned automatically. k/K trigger Packages
 # (not j/J) since k sits right next to l on the keyboard, same as
 # live-websites - Packages sessions still use the "j-" name prefix
 # either way, only the key that reaches them changed.
