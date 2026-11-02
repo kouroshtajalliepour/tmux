@@ -71,6 +71,7 @@ free for whatever you add yourself.
 | `prefix+K` | Packages picker, always |
 | `prefix+L` | live-websites picker, always |
 | `prefix+f` | Find: in the main 4, a window of the main 4; anywhere else, the pinned sessions (`ctrl-x` unpins) |
+| `prefix+F` | The other find: in the main 4, the pinned sessions; anywhere else, a window of the main 4 |
 | `prefix+p` | Back and forth between the last main session and the last code session |
 | `prefix+n` | tmux's own find-window |
 | `prefix+a` | Pin/unpin the current session |
