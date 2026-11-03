@@ -6,18 +6,27 @@
 # sessions - project sessions aren't saved across restarts anymore - so
 # opening a pin whose session is gone rebuilds it via build_project_session.
 #
-#   toggle      pin/unpin the current session
+#   toggle [session] [client]    pin/unpin the session (the binding
+#                                passes '#{session_name}' '#{client_name}')
 #   pick        prefix+f picker (outside the main 4) over the pins (ctrl-x unpins the row;
 #               pins whose directory is gone are pruned on open)
-#   destroy     switch to Sys and kill the current session (pins untouched)
+#   destroy [session] [client]   switch to Sys and kill the session
+#                                (pins untouched)
 #   rows|unpin  internal, used by the picker's reload/ctrl-x
-#   open <s>    switch to pin <s>, rebuilding it if needed (last_session.sh)
+#   open <s> [client]            switch to pin <s>, rebuilding it if
+#                                needed (session_cycle.sh, last_session.sh)
 
 source "$(dirname "$0")/project_lib.sh"
 
 # PIN_FILE, MAIN_SESSIONS, is_main_session, pinned and pin_add live in
 # project_lib.sh (shared with session_cycle.sh and the pickers).
 SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+
+# the client that pressed the key, when the binding passed it (see
+# client_switch in project_lib.sh)
+case "$1" in
+toggle|destroy|open) [ -n "$3" ] && export TMUX_CLIENT="$3" ;;
+esac
 
 mkdir -p "$(dirname "$PIN_FILE")"
 touch "$PIN_FILE"
@@ -48,14 +57,17 @@ unpin() {
 open_pin() {
   local session="$1" dir project_name repo_dir
   if tmux has-session -t "=$session" 2>/dev/null; then
-    tmux switch-client -t "=$session"
+    client_switch "$session"
     return
   fi
-  IFS=$'\t' read -r _ dir project_name repo_dir < <(awk -F'\t' -v s="$session" '$1 == s' "$PIN_FILE")
+  # \x1f, not tab, as the read separator: tab is IFS whitespace, so empty
+  # columns (e.g. no project name) would collapse and shift the rest left.
+  IFS=$'\x1f' read -r dir project_name repo_dir < <(awk -F'\t' -v s="$session" '$1 == s {print $2 "\x1f" $3 "\x1f" $4}' "$PIN_FILE")
   if [ -n "$dir" ] && [ -d "$dir" ]; then
     build_project_session "$dir" "$session" "$project_name" "$repo_dir"
   else
-    tmux display-message "Pin '$session' isn't running and has no directory to rebuild it from"
+    client_msg "Pin '$session' isn't running and has no directory to rebuild it from"
+    return 1
   fi
 }
 
@@ -81,10 +93,10 @@ rows() {
 
 case "$1" in
 toggle)
-  session=$(tmux display-message -p '#S')
+  session=$(current_session "$2")
   if pinned "$session"; then
     unpin "$session"
-    tmux display-message "Unpinned $session"
+    client_msg "Unpinned $session"
     exit 0
   fi
   dir=$(tmux show-option -qv -t "$session" @project_dir)
@@ -97,7 +109,7 @@ toggle)
     repo_dir=$(tmux display-message -p -t "$session" '#{session_path}')
   fi
   pin_add "$session" "$dir" "$project_name" "$repo_dir"
-  tmux display-message "Pinned $session"
+  client_msg "Pinned $session"
   ;;
 
 pick)
@@ -127,13 +139,13 @@ pick)
   ;;
 
 destroy)
-  session=$(tmux display-message -p '#S')
+  session=$(current_session "$2")
   if is_main_session "$session"; then
-    tmux display-message "$session is a main session - not destroying it"
+    client_msg "$session is a main session - not destroying it"
     exit 0
   fi
   tmux has-session -t =Sys 2>/dev/null || "$HOME/.config/tmux/bootstrap_sys.sh" --force
-  tmux switch-client -t =Sys
+  client_switch Sys
   tmux kill-session -t "=$session"
   ;;
 

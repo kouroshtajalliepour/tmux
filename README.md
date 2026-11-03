@@ -37,8 +37,8 @@ Any session can be **pinned** (`prefix+a`); `prefix+f` from a code session lists
 opening one that isn't running rebuilds it. Anything opened through the
 Packages/live-websites pickers is pinned automatically, and a pin whose
 project directory is gone (and whose session isn't running) is dropped
-the next time that list opens. `prefix+j`/`prefix+k` cycle the running
-pins. `prefix+X` self-destructs the current session and drops you back
+the next time that list opens. `prefix+j`/`prefix+k` cycle the pins,
+starting any that aren't running (handy right after a boot). `prefix+X` self-destructs the current session and drops you back
 on Sys.
 
 The status bar's left pill shows a project session by its repo name
@@ -66,7 +66,7 @@ free for whatever you add yourself.
 | Key | Destination |
 |---|---|
 | `prefix+h` / `prefix+l` | Previous / next window |
-| `prefix+j` / `prefix+k` | Next / previous session: the main 4 when you're in one of them, otherwise the running pins (main 4 skipped) |
+| `prefix+j` / `prefix+k` | Next / previous session: the main 4 when you're in one of them, otherwise your pins (main 4 skipped), starting any that aren't running |
 | `prefix+H` / `prefix+J` | Infra / Media (fixed) |
 | `prefix+K` | Packages picker, always |
 | `prefix+L` | live-websites picker, always |

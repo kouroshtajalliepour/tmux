@@ -1,17 +1,25 @@
 #!/usr/bin/env bash
 # prefix+j / prefix+k: next / previous session, depending on where you are:
 #   - in one of the main 4 (Sys/Infra/Media/Todos): cycle the main 4
-#   - anywhere else: cycle the pinned sessions (pins.sh, prefix+f) that
-#     are running, in pin order, skipping the main 4
+#   - anywhere else: cycle your pinned sessions (pins.sh, prefix+f) in pin
+#     order, skipping the main 4 - running or not. A pin that isn't
+#     running (e.g. right after a boot - only the main 4 are restored) is
+#     started on arrival, rebuilt from its saved directory. Pins whose
+#     directory is gone are skipped.
 # Wraps around both ways. From a session that isn't in the list, next
 # goes to the first entry and prev to the last. Shows "pin 2/5: name" /
-# "main 1/4: Sys" after the switch.
+# "main 1/4: Sys" after the switch, plus "(started)" when it had to
+# build the session.
 #
 # $1 = next | prev
+# $2 = the session the key was pressed in, $3 = that client - the
+#      binding passes '#{session_name}' '#{client_name}' (see
+#      client_switch in project_lib.sh)
 
 source "$(dirname "$0")/project_lib.sh"
 
-current=$(tmux display-message -p '#S')
+[ -n "$3" ] && export TMUX_CLIENT="$3"
+current=$(current_session "$2")
 
 list=()
 if is_main_session "$current"; then
@@ -22,17 +30,19 @@ if is_main_session "$current"; then
 else
   kind=pin
   if [ -f "$PIN_FILE" ]; then
-    while IFS= read -r s; do
+    while IFS=$'\x1f' read -r s dir; do
       [ -z "$s" ] && continue
       is_main_session "$s" && continue
-      tmux has-session -t "=$s" 2>/dev/null && list+=("$s")
-    done < <(awk -F'\t' '{print $1}' "$PIN_FILE")
+      if tmux has-session -t "=$s" 2>/dev/null || { [ -n "$dir" ] && [ -d "$dir" ]; }; then
+        list+=("$s")
+      fi
+    done < <(awk -F'\t' '{print $1 "\x1f" $2}' "$PIN_FILE")
   fi
 fi
 
 n=${#list[@]}
 if [ "$n" -eq 0 ]; then
-  tmux display-message "No running pins - prefix+a pins the current session"
+  client_msg "No pins yet - prefix+a pins the current session"
   exit 0
 fi
 
@@ -42,7 +52,7 @@ for i in "${!list[@]}"; do
 done
 
 if [ "$idx" -ge 0 ] && [ "$n" -eq 1 ]; then
-  tmux display-message "Only $kind running: $current"
+  client_msg "Only $kind: $current"
   exit 0
 fi
 
@@ -58,5 +68,10 @@ j-*|l-*|lr-*) label="${session#*-}" ;;
 *) label="$session" ;;
 esac
 
-tmux switch-client -t "=$session"
-tmux display-message "$kind $((target + 1))/$n: $label"
+if tmux has-session -t "=$session" 2>/dev/null; then
+  client_switch "$session"
+  client_msg "$kind $((target + 1))/$n: $label"
+else
+  "$(dirname "$0")/pins.sh" open "$session" "$TMUX_CLIENT" || exit 0
+  client_msg "$kind $((target + 1))/$n: $label (started)"
+fi

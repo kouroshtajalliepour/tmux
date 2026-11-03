@@ -2,6 +2,27 @@
 # Shared helpers for the project-session scripts (sourced, not run directly).
 source "$(dirname "${BASH_SOURCE[0]}")/fzf_common.sh"
 
+# Key bindings pass the client that pressed the key ('#{client_name}')
+# and scripts export it as TMUX_CLIENT. A script started by run-shell has
+# no client of its own, so a bare switch-client / display-message (or
+# display-message -p '#S') makes tmux guess one - with the main terminal
+# and the alt+` drop-down both attached it can pick the wrong one (that's
+# how prefix+a once unpinned a different session). These two aim at
+# TMUX_CLIENT when it's set and behave as before otherwise.
+client_switch() {
+  tmux switch-client ${TMUX_CLIENT:+-c "$TMUX_CLIENT"} -t "=$1"
+}
+
+client_msg() {
+  tmux display-message ${TMUX_CLIENT:+-c "$TMUX_CLIENT"} "$1"
+}
+
+# The session the key was pressed in: $1 if the binding passed it
+# ('#{session_name}'), else tmux's own guess.
+current_session() {
+  if [ -n "$1" ]; then printf '%s\n' "$1"; else tmux display-message -p '#S'; fi
+}
+
 # Prints the window index in session $1 whose name is exactly $2, or
 # nothing if there isn't one.
 project_window_index() {
@@ -49,22 +70,23 @@ find_main_worktree() {
 # branch_picker.sh, which only makes sense inside a Packages/live-
 # websites session. Prints "container\tproject_name\tmain_dir\tprefix"
 # on success; on failure, shows why via tmux display-message and
-# returns 1 - callers should just `|| exit 0` on this.
+# returns 1 - callers should just `|| exit 0` on this. $1 (optional):
+# the session to use instead of tmux's guess (see current_session).
 resolve_current_project() {
   local session vi_idx dir container project_name main_dir session_prefix
-  session=$(tmux display-message -p '#S')
+  session=$(current_session "$1")
 
   case "$session" in
   j-*|l-*|lr-*) ;;
   *)
-    tmux display-message "Only works in a Packages/live-websites session"
+    client_msg "Only works in a Packages/live-websites session"
     return 1
     ;;
   esac
 
   vi_idx=$(project_window_index "$session" vi)
   if [ -z "$vi_idx" ]; then
-    tmux display-message "Not a project session (needs a vi window)"
+    client_msg "Not a project session (needs a vi window)"
     return 1
   fi
 
@@ -72,7 +94,7 @@ resolve_current_project() {
   container=$(dirname "$dir")
 
   if ! is_worktree_container "$container"; then
-    tmux display-message "Not a worktree-container project"
+    client_msg "Not a worktree-container project"
     return 1
   fi
 
@@ -140,7 +162,7 @@ build_project_session() {
   tmux set-option -t "$session" @project_dir "$dir"
   tmux set-option -t "$session" @repo_dir "$repo_dir"
 
-  tmux switch-client -t "=$session"
+  client_switch "$session"
 
   # Remember this as the last-visited session for its category (j, or
   # l/lr both collapse to "l"), so prefix+j/l can jump straight back
