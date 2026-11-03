@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # prefix+m k/l (the hub, category_hub.sh): open the full-screen branch
 # picker (branch_picker.sh) scoped to the last-visited project in this
-# category (Packages/live-websites), so you see every sibling branch's
+# category (Packages/Live/Infra/Training), so you see every sibling branch's
 # state before jumping, instead of silently landing wherever you left
 # off. Falls back to the full project picker (same as prefix+K/L) if
 # there's no last-visited project yet.
@@ -12,7 +12,7 @@
 # showing anything. The picker fills the hub's full-screen popup instead,
 # the same way hub K/L do.
 #
-# $1 = category (j or l) $2 = picker root dir $3 = picker session
+# $1 = category (j, l, i or t) $2 = picker root dir $3 = picker session
 # prefix. $4/$5 (popup title/border color) are still accepted from the
 # hub's call but unused now that there's no popup of its own.
 category="$1"
@@ -32,4 +32,7 @@ if [ -f "$project_file" ] && [ -f "$last_session_file" ]; then
   exec "$(dirname "$0")/branch_picker.sh" "$project_name" "$exact_prefix"
 fi
 
+# Training has a person level first (training_picker.sh), the rest go
+# straight to their project picker
+[ "$category" = t ] && exec "$(dirname "$0")/training_picker.sh" "$root"
 exec "$(dirname "$0")/tmux-sessionizer" "$root" "$prefix"

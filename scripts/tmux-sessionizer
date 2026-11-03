@@ -7,7 +7,7 @@
 # repos - admin-panel/backend/frontend - not branches of one project)
 # gets treated as a wrapper: its own children are listed instead, one
 # level down, each with "$2r" as their session prefix instead of "$2"
-# (so e.g. live-websites' "l" becomes "lr" for the actual repo-level
+# (so e.g. Live's "l" becomes "lr" for the actual repo-level
 # sessions - see theme.conf's color scheme, which colors these two
 # differently on purpose).
 #
@@ -30,6 +30,15 @@ fzf_vim_nav_args " Search  "
 
 ROOT="${1:-$HOME/Documents}"
 PREFIX="${2:-p}"
+# $3 (optional): put in front of every project name - training_picker.sh
+# passes the person ("Tarokh-Bostani"), so two people's repos with the
+# same name get separate sessions and last-branch memory:
+# t-Tarokh-Bostani-mavida-recreation-master.
+NAME_PREFIX="${3:-}"
+
+project_name_of() {
+  if [ -n "$NAME_PREFIX" ]; then printf '%s-%s\n' "$NAME_PREFIX" "$(basename "$1")"; else basename "$1"; fi
+}
 
 # Accent for this category, matching theme.conf's session colors (and
 # the popup border color set in project.conf) - the fzf UI itself
@@ -38,6 +47,8 @@ PREFIX="${2:-p}"
 case "$PREFIX" in
 j) accent="#cba6f7" ;;
 l) accent="#a6e3a1" ;;
+i) accent="#94e2d5" ;;
+t) accent="#f9e2af" ;;
 *) accent="#89b4fa" ;;
 esac
 fzf_color="bg+:#313244,bg:#1e1e2e,fg:#cdd6f4,fg+:#ffffff,hl:${accent},hl+:${accent},border:${accent},prompt:${accent},pointer:${accent},marker:${accent},spinner:${accent},header:#9399b2,info:#9399b2"
@@ -98,7 +109,7 @@ session_prefix=${selected_line##*$'\t'}
 
 if is_worktree_container "$selected"; then
   container="$selected"
-  project_name=$(basename "$container")
+  project_name=$(project_name_of "$container")
   main_dir=$(find_main_worktree "$container")
 
   worktree_dir="$main_dir"
@@ -115,14 +126,14 @@ if is_worktree_container "$selected"; then
 elif [ -d "$selected/.git" ]; then
   # plain single-checkout, not yet converted - convert (fetches every
   # remote branch too), open the branch you were already on
-  project_name=$(basename "$selected")
+  project_name=$(project_name_of "$selected")
   branch_dir=$(convert_to_worktree_container "$selected")
   worktree_dir="$selected/$branch_dir"
   session="${session_prefix}-${project_name}-${branch_dir}"
   repo_dir="$selected"
 
 else
-  project_name=$(basename "$selected")
+  project_name=$(project_name_of "$selected")
   worktree_dir="$selected"
   session="${session_prefix}-${project_name}"
   repo_dir="$selected"

@@ -63,10 +63,7 @@ else
 fi
 
 session=${list[$target]}
-case "$session" in
-j-*|l-*|lr-*) label="${session#*-}" ;;
-*) label="$session" ;;
-esac
+label=$(session_label "$session")
 
 if tmux has-session -t "=$session" 2>/dev/null; then
   client_switch "$session"

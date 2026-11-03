@@ -77,10 +77,7 @@ rows() {
   while IFS=$'\t' read -r session _; do
     [ -z "$session" ] && continue
     i=$((i + 1))
-    case "$session" in
-    j-*|l-*|lr-*) label="${session#*-}" ;;
-    *) label="$session" ;;
-    esac
+    label=$(session_label "$session")
     marker=""
     if ! tmux has-session -t "=$session" 2>/dev/null; then
       marker=$' \e[2m○\e[0m'

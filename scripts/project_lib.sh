@@ -35,7 +35,7 @@ project_window_index() {
 # rather than one shared working tree.
 #
 # Shape alone can't tell this apart from "a plain folder that happens to
-# have exactly one git-repo child" (e.g. ~/Documents/Packages itself,
+# have exactly one git-repo child" (e.g. ~/Documents/repos/packages itself,
 # sitting right next to vue-kit) - both look identical when there's only
 # one branch/checkout so far. So this is true only when EITHER:
 #   - a child's .git is a FILE (unambiguous - that's a real linked
@@ -76,13 +76,10 @@ resolve_current_project() {
   local session vi_idx dir container project_name main_dir session_prefix
   session=$(current_session "$1")
 
-  case "$session" in
-  j-*|l-*|lr-*) ;;
-  *)
-    client_msg "Only works in a Packages/live-websites session"
+  if ! is_code_session "$session"; then
+    client_msg "Only works in a code session (Packages/Live/Infra/Training)"
     return 1
-    ;;
-  esac
+  fi
 
   vi_idx=$(project_window_index "$session" vi)
   if [ -z "$vi_idx" ]; then
@@ -98,7 +95,10 @@ resolve_current_project() {
     return 1
   fi
 
-  project_name=$(basename "$container")
+  # the session's own project name first: Training's include the person
+  # ("Tarokh-Bostani-mavida-recreation"), which the folder name doesn't
+  project_name=$(tmux show-option -qv -t "$session" @display_name)
+  [ -n "$project_name" ] || project_name=$(basename "$container")
   main_dir=$(find_main_worktree "$container")
   session_prefix=${session%%-*}
 
@@ -120,7 +120,7 @@ session_done() {
 # $1 when not given (plain non-git dirs have no such distinction).
 # Window 9 ("ai") is just an idle shell - it used to auto-launch a claude
 # session here, but every caller of this function now is a Packages/
-# live-websites session, where that's unwanted noise.
+# Live/Infra/Training session, where that's unwanted noise.
 # Repo name for branch dir $1: the worktree container's name if $1 is one
 # of its branches (".../tmux/master" -> "tmux"), else $1's own name. Used
 # for @display_name (the status bar's left pill) when a caller - e.g. an
@@ -233,6 +233,23 @@ convert_to_worktree_container() {
   printf '%s\n' "$branch_dir"
 }
 
+# Code sessions, by session-name prefix (the picker that builds them):
+#   j-   Packages        ~/Documents/repos/packages
+#   l-   Live            ~/Documents/repos/live (lr- one wrapper folder down,
+#                        e.g. mavidahome.com/<repo>)
+#   i-   Infra           ~/Documents/repos/infra
+#   t-   Training        ~/Documents/repos/training/<Person>/<repo>
+is_code_session() {
+  case "$1" in j-*|l-*|lr-*|i-*|t-*) return 0 ;; esac
+  return 1
+}
+
+# A code session's label without its category prefix ("j-tmux-master" ->
+# "tmux-master"); anything else unchanged.
+session_label() {
+  if is_code_session "$1"; then printf '%s\n' "${1#*-}"; else printf '%s\n' "$1"; fi
+}
+
 # The 4 hand-maintained sessions (see bootstrap_sys.sh). prefix+j/k
 # cycles these when you're in one of them (session_cycle.sh), and they're
 # never auto-killed by pins.sh destroy.
@@ -250,6 +267,23 @@ PIN_FILE="$HOME/.cache/tmux-pinned"
 pinned() {
   [ -f "$PIN_FILE" ] || return 1
   awk -F'\t' -v s="$1" '$1 == s {found = 1} END {exit !found}' "$PIN_FILE"
+}
+
+# Prints the first pin that can be opened: not one of the main 4, and
+# either running or with its directory still there to rebuild from (the
+# same filter session_cycle.sh uses). Fails if there's none.
+first_pin() {
+  [ -f "$PIN_FILE" ] || return 1
+  local s dir
+  while IFS=$'\x1f' read -r s dir; do
+    [ -z "$s" ] && continue
+    is_main_session "$s" && continue
+    if tmux has-session -t "=$s" 2>/dev/null || { [ -n "$dir" ] && [ -d "$dir" ]; }; then
+      printf '%s\n' "$s"
+      return 0
+    fi
+  done < <(awk -F'\t' '{print $1 "\x1f" $2}' "$PIN_FILE")
+  return 1
 }
 
 # Pins session $1 (dir $2, project name $3, repo dir $4) unless it's

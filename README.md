@@ -18,13 +18,17 @@ know what kind of session you're in from the status bar alone.
 
 Sessions fall into two kinds:
 
-- **Dynamic project sessions** (Packages, live-websites) - picked from a
-  directory tree via `scripts/tmux-sessionizer`, one row per project. A
+- **Dynamic project sessions** - one category per folder under
+  `~/Documents/repos/`: `packages/` (Packages, `j-*`, mauve), `live/`
+  (Live, `l-*`/`lr-*`, green), `infra/` (Infra, `i-*`, teal) and
+  `training/` (Training, `t-*`, yellow - one folder per person mentored,
+  `training/<Person>/<repo>`, picked person first). Picked from that
+  directory via `scripts/tmux-sessionizer`, one row per project. A
   project that has grown multiple branches is a *worktree container*: each
   branch lives in its own subdirectory as a real `git worktree`, not a
   single checkout you keep switching inside. Picking a project reopens
   whichever branch you last worked on there; picking a *specific* branch is
-  a separate command (`prefix+k`/`prefix+l`), not the main list's job.
+  a separate command (the hub's h/j/k/l), not the main list's job.
   These are **not** saved across restarts - they're rebuilt on demand, so
   boot only pays for the four fixed sessions.
 - **Fixed sessions** (Sys, Media, Todos, Infra) - four sessions you jump
@@ -35,7 +39,7 @@ Sessions fall into two kinds:
 
 Any session can be **pinned** (`prefix+a`); `prefix+f` from a code session lists the pins. Pins outlive their sessions -
 opening one that isn't running rebuilds it. Anything opened through the
-Packages/live-websites pickers is pinned automatically, and a pin whose
+repo pickers is pinned automatically, and a pin whose
 project directory is gone (and whose session isn't running) is dropped
 the next time that list opens. `prefix+j`/`prefix+k` cycle the pins,
 starting any that aren't running (handy right after a boot). `prefix+X` self-destructs the current session and drops you back
@@ -67,9 +71,9 @@ free for whatever you add yourself.
 |---|---|
 | `prefix+h` / `prefix+l` | Previous / next window |
 | `prefix+j` / `prefix+k` | Next / previous session: the main 4 when you're in one of them, otherwise your pins (main 4 skipped), starting any that aren't running |
-| `prefix+H` / `prefix+J` | Infra / Media (fixed) |
-| `prefix+K` | Packages picker, always |
-| `prefix+L` | live-websites picker, always |
+| `prefix+K` / `prefix+L` | Packages / Live project picker |
+| `prefix+J` | Infra project picker |
+| `prefix+H` | Training: pick the person, then their repo |
 | `prefix+f` | Find: in the main 4, a window of the main 4; anywhere else, the pinned sessions (`ctrl-x` unpins) |
 | `prefix+F` | The other find: in the main 4, the pinned sessions; anywhere else, a window of the main 4 |
 | `prefix+p` | Back and forth between the last main session and the last code session |
@@ -77,7 +81,7 @@ free for whatever you add yourself.
 | `prefix+a` | Pin/unpin the current session |
 | `prefix+N` / `prefix+P` | Next / previous branch of the current project |
 | `prefix+X` | Kill the current session, back to Sys |
-| `prefix+m` | Full-screen D-pad hub - h Todos, H Infra, j Sys, J Media, k/K Packages (last project's branch picker / picker), l/L live-websites |
+| `prefix+m` | Full-screen D-pad hub - k/K Packages, l/L Live, j/J Infra, h/H Training (plain letter: the last project's branches; Shift: the project picker), 1-4 the main sessions. Sizes itself to the screen (fits the alt+\` drop-down) |
 | `prefix+v` | tmux's own built-in session tree |
 
 ## Structure
@@ -86,7 +90,8 @@ free for whatever you add yourself.
   `theme.conf`, `general.conf`, `bindings.conf`).
 - `scripts/` - everything project.conf shells out to. `project_lib.sh` holds
   the shared worktree/session logic; `tmux-sessionizer`, `category_hub.sh`,
-  `branch_picker.sh`, `jump_last.sh`, `session_switch.sh`, `pins.sh` are
+  `branch_picker.sh`, `jump_last.sh`, `session_switch.sh`, `pins.sh`,
+  `training_picker.sh` (person first) are
   the individual pickers (`branch_cycle.sh` is prefix+N/P, `session_cycle.sh`
   prefix+j/k, `last_session.sh` prefix+p, `dropdown.sh` the alt+\` drop-down); `fzf_common.sh` centralizes the fzf styling and
   vim-motion nav mode shared by all of them.

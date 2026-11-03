@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Background poller, started once via run-shell -b in project.conf. Every
-# ~2s it snapshots every pane of every Packages/live-websites session
-# (j-/l-/lr-) and works out a busy -> done transition per pane:
+# ~2s it snapshots every pane of every code session (j-/l-/lr-/i-/t-) and
+# works out a busy -> done transition per pane:
 #   - content changed on BUSY_POLLS polls in a row -> busy (something is
 #     actually animating/streaming, not just a one-off redraw).
 #   - busy, then unchanged for IDLE_POLLS polls -> done: sets the window
@@ -39,7 +39,7 @@ while sleep "$POLL"; do
   seen=()
   while IFS=$'\t' read -r session pane win sz visible; do
     case "$session" in
-    j-*|l-*|lr-*) ;;
+    j-*|l-*|lr-*|i-*|t-*) ;;
     *) continue ;;
     esac
     seen[$pane]=1
