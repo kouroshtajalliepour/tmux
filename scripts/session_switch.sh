@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
-# prefix+s: fuzzy-pick a window by name across your saved sessions only -
-# just the window name shown, no session name prefix, so it reads like a
-# flat list of everything you've got open. Project sessions (p-*) are
-# excluded entirely here, since they're ad-hoc and rebuilt on demand by
-# tmux-sessionizer, not part of the saved roster; reach those via
-# prefix+S or prefix+B instead, or prefix+v for tmux's own built-in
-# (unfiltered) session tree.
+# prefix+f: fuzzy-pick a window by name across the sessions (on production
+# that's just the host session). Only the window name is shown, so it reads like a
+# flat list of everything open.
 source "$(dirname "$0")/fzf_common.sh"
 fzf_vim_nav_args " Search  "
 
