@@ -22,13 +22,25 @@ source "$(dirname "$0")/project_lib.sh"
 current=$(current_session "$2")
 
 list=()
-if is_main_session "$current"; then
+# $4 = project: only the pinned branches of the current project (the main 4
+# still cycle among themselves)
+project=""
+if [ "$4" = project ] && ! is_main_session "$current"; then
+  project=$(awk -F'\t' -v s="$current" '$1 == s { print $3; exit }' "$PIN_FILE" 2>/dev/null)
+  if [ -z "$project" ]; then
+    client_msg "This session isn't a pinned project branch"
+    exit 0
+  fi
+fi
+
+if [ -z "$project" ] && is_main_session "$current"; then
   kind=main
   for s in $MAIN_SESSIONS; do
     tmux has-session -t "=$s" 2>/dev/null && list+=("$s")
   done
 else
-  kind=pin
+  kind=${project:+branch}
+  kind=${kind:-pin}
   if [ -f "$PIN_FILE" ]; then
     while IFS=$'\x1f' read -r s dir; do
       [ -z "$s" ] && continue
@@ -36,7 +48,7 @@ else
       if tmux has-session -t "=$s" 2>/dev/null || { [ -n "$dir" ] && [ -d "$dir" ]; }; then
         list+=("$s")
       fi
-    done < <(awk -F'\t' '{print $1 "\x1f" $2}' "$PIN_FILE")
+    done < <(awk -F'\t' -v p="$project" 'p == "" || $3 == p {print $1 "\x1f" $2}' "$PIN_FILE")
   fi
 fi
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Pinned-session list + self-destruct (see project.conf for the keys).
-# Pins live in ~/.cache/tmux-pinned, one per line:
+# Pins live in ~/.jarvis/pinned-branches.tsv, one per line:
 #   session<TAB>project_dir<TAB>project_name<TAB>repo_dir
 # (the last three empty for non-project sessions). Pins outlive their
 # sessions - project sessions aren't saved across restarts anymore - so
@@ -25,7 +25,7 @@ SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 # the client that pressed the key, when the binding passed it (see
 # client_switch in project_lib.sh)
 case "$1" in
-toggle|destroy|open) [ -n "$3" ] && export TMUX_CLIENT="$3" ;;
+toggle|destroy|open|pick) [ -n "$3" ] && export TMUX_CLIENT="$3" ;;
 esac
 
 mkdir -p "$(dirname "$PIN_FILE")"
@@ -72,10 +72,12 @@ open_pin() {
 }
 
 # Picker rows: "session<TAB>N  label[ *]". Dead pins get a dim ○.
+# $1: only this project's pins (all of them when empty).
 rows() {
-  local i=0 session label marker
-  while IFS=$'\t' read -r session _; do
+  local i=0 session label marker project
+  while IFS=$'\x1f' read -r session project; do
     [ -z "$session" ] && continue
+    [ -n "$1" ] && [ "$project" != "$1" ] && continue
     i=$((i + 1))
     label=$(session_label "$session")
     marker=""
@@ -85,7 +87,7 @@ rows() {
       marker=" *"
     fi
     printf '%s\t%d  %s%s\n' "$session" "$i" "$label" "$marker"
-  done < "$PIN_FILE"
+  done < <(awk -F'\t' '{print $1 "\x1f" $3}' "$PIN_FILE")
 }
 
 case "$1" in
@@ -116,23 +118,77 @@ pick)
     exit 0
   fi
   fzf_vim_nav_args " Search  "
-  selected_line=$(rows | fzf \
+  # $2: the session the key was pressed in; the list is limited to its project
+  project=$(awk -F'\t' -v s="$2" '$1 == s { print $3; exit }' "$PIN_FILE")
+
+  # A frontend project gets a Code / Web toggle: w in vim-keys mode (esc), or
+  # ctrl-w while typing. Code goes to the branch, Web also opens its browser
+  # tab on workspace 11, starting its dev server if needed.
+  source "$(dirname "$SELF")/preview/lib.sh"
+  frontend=""
+  if [ -n "$project" ]; then
+    while IFS= read -r s; do
+      [ -n "$(port_for_session "$s")" ] && frontend=1 && break
+    done < <(awk -F'\t' -v p="$project" '$3 == p { print $1 }' "$PIN_FILE")
+  fi
+  prompt=" Search  "
+  header="pinned branches${project:+ of $project}  (ctrl-x unpin)"
+  mode_args=()
+  if [ -n "$frontend" ]; then
+    prompt=" Code  "
+    header="esc: vim keys · w or ctrl-w: code / web · ctrl-x unpin"
+    keys="j,k,g,G,1,2,3,4,5,6,7,8,9,w"
+    toggle="transform:case \"\$FZF_PROMPT\" in *Code*NAV*) printf 'change-prompt( Web NAV  )';; *Web*NAV*) printf 'change-prompt( Code NAV  )';; *Web*) printf 'change-prompt( Code  )';; *) printf 'change-prompt( Web  )';; esac"
+    finish="become(printf '%s\t%s\n' \"\$FZF_PROMPT\" {1})"
+    mode_args=(
+      --bind "start:unbind($keys)"
+      --bind "esc:transform:case \"\$FZF_PROMPT\" in *Code*NAV*) printf 'unbind($keys)+change-prompt( Code  )';; *Web*NAV*) printf 'unbind($keys)+change-prompt( Web  )';; *Web*) printf 'rebind($keys)+change-prompt( Web NAV  )';; *) printf 'rebind($keys)+change-prompt( Code NAV  )';; esac"
+      --bind "w:$toggle"
+      --bind "ctrl-w:$toggle"
+      --bind "enter:$finish"
+    )
+    for n in 1 2 3 4 5 6 7 8 9; do
+      mode_args+=(--bind "$n:pos($n)+$finish")
+    done
+  fi
+
+  selected_line=$(rows "$project" | fzf \
     --ansi \
     --exact \
-    --prompt=" Search  " \
+    --prompt="$prompt" \
     --pointer="▶" \
     --border=rounded \
     --height=100% \
     --layout=reverse \
     --info=inline \
-    --header="pinned sessions  (ctrl-x unpin)" \
+    --header="$header" \
     --delimiter=$'\t' \
     --with-nth=2 \
-    --bind "ctrl-x:execute-silent('$SELF' unpin {1})+reload('$SELF' rows)" \
+    --bind "ctrl-x:execute-silent('$SELF' unpin {1})+reload('$SELF' rows '$project')" \
     "${FZF_VIM_NAV_ARGS[@]}" \
+    "${mode_args[@]}" \
     --color="bg+:#313244,bg:#1e1e2e,fg:#cdd6f4,fg+:#ffffff,hl:#f38ba8,hl+:#f38ba8,border:#f38ba8,prompt:#f38ba8,pointer:#f38ba8,marker:#f38ba8,spinner:#f38ba8,header:#9399b2,info:#9399b2")
   [ -z "$selected_line" ] && exit 0
-  open_pin "${selected_line%%$'\t'*}"
+
+  mode=code
+  if [ -n "$frontend" ]; then
+    case "${selected_line%%$'\t'*}" in *Web*) mode=web ;; esac
+    session=${selected_line#*$'\t'}
+  else
+    session=${selected_line%%$'\t'*}
+  fi
+  [ -z "$session" ] && exit 0
+  # PINS_DRY=<file>: write the action there instead of doing it (for testing)
+  [ -n "$PINS_DRY" ] && { echo "$mode $session" >>"$PINS_DRY"; exit 0; }
+
+  open_pin "$session" || exit 0
+  if [ "$mode" = web ]; then
+    if [ -z "$(port_for_session "$session")" ]; then
+      client_msg "$(session_label "$session") has no localhost registered"
+      exit 0
+    fi
+    setsid -f "$(dirname "$SELF")/preview.sh" "$session" "" "$TMUX_CLIENT" >/dev/null 2>&1
+  fi
   ;;
 
 destroy)
@@ -146,7 +202,7 @@ destroy)
   tmux kill-session -t "=$session"
   ;;
 
-rows) rows ;;
+rows) rows "$2" ;;
 unpin) unpin "$2" ;;
 open) open_pin "$2" ;;
 esac

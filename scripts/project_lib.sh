@@ -139,7 +139,9 @@ build_project_session() {
 
   tmux has-session -t "=$session" 2>/dev/null
   # shellcheck disable=SC2181 # the has-session call above is the condition; checking inline would obscure it
+  local created=""
   if [ $? != 0 ]; then
+    created=1
     tmux new-session -d -s "$session" -n repo -c "$repo_dir"
     tmux set-option -t "$session" renumber-windows off
     tmux new-window -t "${session}:7" -n vi -c "$dir"
@@ -163,6 +165,12 @@ build_project_session() {
   tmux set-option -t "$session" @repo_dir "$repo_dir"
 
   client_switch "$session"
+
+  # A brand-new session holding a Vue app gets asked once for its bios.
+  # A rebuilt pin was already asked.
+  if [ -n "$created" ] && ! pinned "$session"; then
+    "$HOME/.config/tmux/scripts/session_bios.sh" ask "$session" "$dir"
+  fi
 
   # Remember this as the last-visited session for its category (j, or
   # l/lr both collapse to "l"), so prefix+j/l can jump straight back
@@ -262,7 +270,23 @@ is_main_session() {
 
 # Pinned sessions (pins.sh, prefix+f/a). One per line:
 #   session<TAB>project_dir<TAB>project_name<TAB>repo_dir
-PIN_FILE="$HOME/.cache/tmux-pinned"
+PIN_FILE="$HOME/.jarvis/pinned-branches.tsv"
+
+# The pinned projects, in pin order, one per line.
+pinned_projects() {
+  awk -F'\t' '$3 != "" && !seen[$3]++ { print $3 }' "$PIN_FILE" 2>/dev/null
+}
+
+# The branch of project $1 to land on: its most recently used running
+# session, otherwise its first pin.
+project_last_branch() {
+  local pins last
+  pins=$(awk -F'\t' -v p="$1" '$3 == p { print $1 }' "$PIN_FILE")
+  last=$(awk 'NR == FNR { w[$1]; next } ($1 in w) { print $1; exit }' \
+    <(printf '%s\n' "$pins") \
+    <(tmux list-sessions -F '#{session_name} #{session_last_attached}' 2>/dev/null | sort -k2,2nr))
+  printf '%s\n' "${last:-$(sed -n 1p <<<"$pins")}"
+}
 
 pinned() {
   [ -f "$PIN_FILE" ] || return 1

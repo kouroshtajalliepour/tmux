@@ -37,11 +37,11 @@ Sessions fall into two kinds:
   post-save hook, `scripts/resurrect_filter.sh`, strips everything else
   from each save).
 
-Any session can be **pinned** (`prefix+a`); `prefix+f` from a code session lists the pins. Pins outlive their sessions -
+Any session can be **pinned** (`prefix+a`); `prefix+f` from a code session lists the pinned branches of its project, and `prefix+F` the pinned projects. Pins outlive their sessions -
 opening one that isn't running rebuilds it. Anything opened through the
 repo pickers is pinned automatically, and a pin whose
 project directory is gone (and whose session isn't running) is dropped
-the next time that list opens. `prefix+j`/`prefix+k` cycle the pins,
+the next time that list opens. `prefix+j`/`prefix+k` cycle a project's pinned branches and `prefix+h`/`prefix+l` move between projects,
 starting any that aren't running (handy right after a boot). `prefix+X` self-destructs the current session and drops you back
 on Sys.
 
@@ -69,7 +69,9 @@ free for whatever you add yourself.
 
 | Key | Destination |
 |---|---|
-| `prefix+h` / `prefix+l` | Previous / next window |
+| `prefix+h` / `prefix+l` | Previous / next pinned project, landing on the branch used last. Every project's active branches are pinned in `~/.jarvis/pinned-branches.tsv` |
+| `:vue 4000` / `:vue auto` / `:unproject` | Set this session's bios: a Vue project on that port, on the next free port, or none (`~/.jarvis/session-bios.tsv`) |
+| `prefix+w` | Running frontend branches down the left, as `branch : localhost:port`: `enter` opens its tab in the browser on 11 |
 | `prefix+j` / `prefix+k` | Next / previous session: the main 4 when you're in one of them, otherwise your pins (main 4 skipped), starting any that aren't running |
 | `prefix+K` / `prefix+L` | Packages / Live project picker |
 | `prefix+J` | Infra project picker |
