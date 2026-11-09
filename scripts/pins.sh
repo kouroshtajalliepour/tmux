@@ -123,7 +123,7 @@ pick)
 
   # A frontend project gets a Code / Web toggle: w in vim-keys mode (esc), or
   # ctrl-w while typing. Code goes to the branch, Web also opens its browser
-  # tab on workspace 11, starting its dev server if needed.
+  # tab on workspace 10 (alt+0), starting its dev server if needed.
   source "$(dirname "$SELF")/preview/lib.sh"
   frontend=""
   if [ -n "$project" ]; then
@@ -187,7 +187,7 @@ pick)
       client_msg "$(session_label "$session") has no localhost registered"
       exit 0
     fi
-    setsid -f "$(dirname "$SELF")/preview.sh" "$session" "" "$TMUX_CLIENT" >/dev/null 2>&1
+    PREVIEW_GOTO=1 setsid -f "$(dirname "$SELF")/preview.sh" "$session" "" "$TMUX_CLIENT" >/dev/null 2>&1
   fi
   ;;
 

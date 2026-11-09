@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # A lone tap of left alt (keyd sends F13 = XF86Tools; i3 binds it here):
-#   on 11 (the preview)     -> the terminal on 1, on the project of the tab
+#   on 10 (the preview)     -> the terminal on 1, on the project of the tab
 #                              you're looking at, same pane as you left it
 #   not on workspace 1      -> the terminal on 1
-#   on 1, frontend project  -> its preview on 11 (scripts/preview.sh)
+#   on 1, frontend project  -> its preview on 10 (scripts/preview.sh)
 #   on 1, anything else     -> nothing
 dir="$(cd "$(dirname "$0")" && pwd)"
 ws=$(i3-msg -t get_workspaces | python3 -c 'import json,sys; print(next((w["name"] for w in json.load(sys.stdin) if w["focused"]), ""))')
@@ -24,7 +24,7 @@ follow_active_tab() {
   [ -n "$client" ] && tmux switch-client -c "$client" -t "=$session"
 }
 
-if [ "$ws" = 11 ]; then
+if [ "$ws" = 10 ]; then
   follow_active_tab
   i3-msg -q workspace number 1
 elif [ "$ws" != 1 ]; then

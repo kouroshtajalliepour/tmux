@@ -5,6 +5,7 @@
   tabs.py [--port N] active       the active tab's URL
   tabs.py [--port N] show URL     focus the tab on URL's host and port, without
                                   reloading it, or open one. Prints what it did
+  tabs.py [--port N] goto URL     take that tab to URL, or open one
 
 Exit codes: 0 ok, 3 Firefox can't be reached, 1 anything else.
 """
@@ -104,14 +105,28 @@ def show(m, url):
     return "opened"
 
 
+def goto(m, url):
+    """Take the tab on URL's host and port to URL, or open one. A tab already
+    on exactly URL is only focused, not reloaded."""
+    _, tabs = m.tabs()
+    for handle, current in tabs:
+        if same_place(current, url):
+            m.call("WebDriver:SwitchToWindow", {"handle": handle, "focus": True})
+            if current == url:
+                return "focused"
+            m.call("WebDriver:Navigate", {"url": url})
+            return "navigated"
+    return show(m, url)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=2828)
-    parser.add_argument("command", choices=["list", "active", "show"])
+    parser.add_argument("command", choices=["list", "active", "show", "goto"])
     parser.add_argument("url", nargs="?")
     args = parser.parse_args()
-    if args.command == "show" and not args.url:
-        parser.error("show needs a URL")
+    if args.command in ("show", "goto") and not args.url:
+        parser.error(f"{args.command} needs a URL")
 
     try:
         m = Marionette(args.port)
@@ -125,6 +140,8 @@ def main():
                 print(("* " if handle == active else "  ") + url)
         elif args.command == "active":
             print(m.url_of(m.active()))
+        elif args.command == "goto":
+            print(goto(m, args.url))
         else:
             print(show(m, args.url))
     except (RuntimeError, Unreachable, OSError, ValueError) as err:

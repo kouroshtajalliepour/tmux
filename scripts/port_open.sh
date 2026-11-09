@@ -2,7 +2,7 @@
 # prefix+O (and prefix+o outside a known project): pick a localhost port -
 # the ones your own processes listen on, labelled with the project and
 # branch they were started from - or type one, and show it in the preview
-# browser on workspace 11 (scripts/preview/lib.sh).
+# browser on workspace 10, alt+0 (scripts/preview/lib.sh).
 source "$(dirname "$0")/fzf_common.sh"
 source "$(dirname "$0")/preview/lib.sh"
 fzf_vim_nav_args " Port  "

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The lone alt tap (scripts/alt_toggle.sh) and prefix+o (tmux): show the
-# project you're in, on workspace 11.
+# project you're in, on workspace 10 (alt+0).
 #
 # The project is the tmux session: $1 when tmux passes it (prefix+o),
 # otherwise the session of the tmux client you used last (the alt tap). It's

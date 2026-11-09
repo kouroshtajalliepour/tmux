@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # The bios of a tmux session: what project type it runs. One row per session
-# in ~/.jarvis/session-bios.tsv: session, type, port, dir, browser.
+# in ~/.jarvis/session-bios.tsv: session, type, port, dir, browser, link.
+# :link /admin/users sets the page alt opens for the session.
 #
 #   :vue 4000 / :vue auto / :unproject   from tmux's prompt, through the aliases and
 #                                   hook in conf/project.conf ("hook" below)
@@ -55,9 +56,33 @@ apply() {
     preview_msg "port $port already belongs to $owner"
     return 1
   fi
+  local link
+  link=$(awk -F'\t' -v s="$session" '$1 == s { print $6; exit }' "$BIOS")
   remove_row "$session"
-  printf '%s\tvue\t%s\t%s\tfirefox\n' "$session" "$port" "$dir" >>"$BIOS"
+  printf '%s\tvue\t%s\t%s\tfirefox\t%s\n' "$session" "$port" "$dir" "${link:-/}" >>"$BIOS"
   preview_msg "vue on localhost:$port"
+}
+
+# Saves the page alt opens for this session, and takes its tab there once.
+set_link() {
+  local session=$1 link=$2 port tmp
+  port=$(port_for_session "$session")
+  if [ -z "$port" ]; then
+    preview_msg "this session has no project type yet: :vue 4000"
+    return 1
+  fi
+  # accept a pasted full URL, keeping only its path
+  link=$(sed -E 's#^https?://[^/]+##' <<<"$link")
+  [ "${link:0:1}" = / ] || link="/$link"
+  if [[ "$link" =~ [[:space:]] ]]; then
+    preview_msg "not a link: $link"
+    return 1
+  fi
+  tmp=$(mktemp "$BIOS.XXXX")
+  awk -F'\t' -v OFS='\t' -v s="$session" -v l="$link" '$1 == s { $6 = l } 1' "$BIOS" >"$tmp" && mv "$tmp" "$BIOS"
+  preview_msg "alt opens localhost:$port$link"
+  port_listening "$port" && python3 -I "$PREVIEW_TABS" goto "http://localhost:$port$link" >/dev/null 2>&1
+  return 0
 }
 
 # Finds the app under the given directories and applies it. Several apps ask.
@@ -89,6 +114,9 @@ hook)
   session=$2 pane=$3 option=$5 value=$6
   [ -n "$4" ] && export TMUX_CLIENT=$4
   case "$option" in
+  @link)
+    set_link "$session" "$value"
+    ;;
   @unproject)
     remove_row "$session"
     preview_msg "no project type on this session now"
