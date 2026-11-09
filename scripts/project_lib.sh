@@ -136,10 +136,10 @@ build_project_session() {
   # tmux reads "." and ":" in a target as window/pane ("release-0.1.0" -> pane "1.0"), so a
   # session named with them can't be switched to: use "_" like branch_picker.sh does
   session=${session//[.:]/_}
+  local created=""
 
   tmux has-session -t "=$session" 2>/dev/null
   # shellcheck disable=SC2181 # the has-session call above is the condition; checking inline would obscure it
-  local created=""
   if [ $? != 0 ]; then
     created=1
     tmux new-session -d -s "$session" -n repo -c "$repo_dir"
