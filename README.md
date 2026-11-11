@@ -1,5 +1,19 @@
 # tmux
 
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ** NOTICE **                                                  ║
+║                                                                ║
+║  THESE DOTFILES ARE VIBE CODED                                 ║
+║  AND NOT A SINGLE FUCK WAS GIVEN ABOUT IT.                     ║
+║                                                                ║
+║  AN AI AT THE KEYBOARD, A HUMAN AT THE WHEEL, USED EVERY DAY.  ║
+║  IF YOU LIKE IT, USE IT. IF YOU DON'T, DON'T.                  ║
+║                                                                ║
+║  PRESS ANY KEY TO CONTINUE_                                    ║
+╚════════════════════════════════════════════════════════════════╝
+```
+
 A git-worktree-aware project switcher built on top of tmux - not a plugin,
 a set of scripts and config that turn tmux into a session manager for how I
 actually work: lots of repos, lots of branches, each one wanting its own
@@ -13,6 +27,18 @@ know what kind of session you're in from the status bar alone.
 > need the project-switcher - just `prefix+s` (session switcher), no
 > category pickers, no auto-created sessions, status bar on the bottom,
 > prefix is `Ctrl+s` instead of `Ctrl+b`.
+
+## Try it
+
+```sh
+git clone https://github.com/kouroshtajalliepour/tmux ~/.config/tmux
+ln -s ~/.config/tmux/plugins/tpm ~/.tmux/plugins/tpm   # tmux.conf runs tpm from there
+tmux
+```
+
+- tmux 3.2 or newer (popups), `git`, `fzf`, `xclip`. The three plugins are vendored under `plugins/`.
+- The preview and the lone-alt-tap parts also want `xdotool`, `python3`, Firefox and i3. Without them those keys just do nothing.
+- Projects are expected under `~/Documents/repos/{packages,live,infra,training}`. Pins and session bios are written to `~/.local/state/tmux/`.
 
 ## The model
 
