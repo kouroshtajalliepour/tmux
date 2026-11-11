@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The bios of a tmux session: what project type it runs. One row per session
-# in ~/.jarvis/session-bios.tsv: session, type, port, dir, browser, link.
+# in ~/.local/state/tmux/session-bios.tsv: session, type, port, dir, browser, link.
 # :link /admin/users sets the page alt opens for the session.
 #
 #   :vue 4000 / :vue auto / :unproject   from tmux's prompt, through the aliases and

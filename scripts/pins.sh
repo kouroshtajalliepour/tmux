@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Pinned-session list + self-destruct (see project.conf for the keys).
-# Pins live in ~/.jarvis/pinned-branches.tsv, one per line:
+# Pins live in ~/.local/state/tmux/pinned-branches.tsv, one per line:
 #   session<TAB>project_dir<TAB>project_name<TAB>repo_dir
 # (the last three empty for non-project sessions). Pins outlive their
 # sessions - project sessions aren't saved across restarts anymore - so
@@ -93,6 +93,10 @@ rows() {
 case "$1" in
 toggle)
   session=$(current_session "$2")
+  if is_main_session "$session"; then
+    client_msg "$session is a main session, it's always there - nothing to pin"
+    exit 0
+  fi
   if pinned "$session"; then
     unpin "$session"
     client_msg "Unpinned $session"

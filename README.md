@@ -69,8 +69,8 @@ free for whatever you add yourself.
 
 | Key | Destination |
 |---|---|
-| `prefix+h` / `prefix+l` | Previous / next pinned project, landing on the branch used last. Every project's active branches are pinned in `~/.jarvis/pinned-branches.tsv` |
-| `:vue 4000` / `:vue auto` / `:unproject` | Set this session's bios: a Vue project on that port, on the next free port, or none (`~/.jarvis/session-bios.tsv`) |
+| `prefix+h` / `prefix+l` | Previous / next pinned project, landing on the branch used last. Every project's active branches are pinned in `~/.local/state/tmux/pinned-branches.tsv` |
+| `:vue 4000` / `:vue auto` / `:unproject` | Set this session's bios: a Vue project on that port, on the next free port, or none (`~/.local/state/tmux/session-bios.tsv`) |
 | `:link /admin/users` | The page alt opens for this session. Takes its tab there once; after that alt never reloads it |
 | `prefix+j` / `prefix+k` | Next / previous session: the main 4 when you're in one of them, otherwise your pins (main 4 skipped), starting any that aren't running |
 | `prefix+K` / `prefix+L` | Packages / Live project picker |

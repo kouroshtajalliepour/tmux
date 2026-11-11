@@ -4,7 +4,7 @@
 #
 # The project is the tmux session: $1 when tmux passes it (prefix+o),
 # otherwise the session of the tmux client you used last (the alt tap). It's
-# looked up in ~/.jarvis/session-bios.tsv - one row per session:
+# looked up in ~/.local/state/tmux/session-bios.tsv - one row per session:
 #   <session> <TAB> <kind> <TAB> <args...>
 # and handed to scripts/preview/<kind>.sh (vue today; a Unity project
 # would be a unity.sh). A session with no row isn't a previewable

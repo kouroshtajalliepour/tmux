@@ -270,7 +270,7 @@ is_main_session() {
 
 # Pinned sessions (pins.sh, prefix+f/a). One per line:
 #   session<TAB>project_dir<TAB>project_name<TAB>repo_dir
-PIN_FILE="$HOME/.jarvis/pinned-branches.tsv"
+PIN_FILE="$HOME/.local/state/tmux/pinned-branches.tsv"
 
 # The pinned projects, in pin order, one per line.
 pinned_projects() {

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Moving between pinned projects (~/.jarvis/pinned-branches.tsv), one row per
+# Moving between pinned projects (~/.local/state/tmux/pinned-branches.tsv), one row per
 # project. Each lands on the branch you used last there.
 #   next|prev <session> <client>   prefix+l / prefix+h
 #   pick <session> <client>        prefix+F

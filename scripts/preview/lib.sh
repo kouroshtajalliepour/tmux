@@ -8,7 +8,7 @@
 PREVIEW_WS=10
 PREVIEW_CLASS=firefox-dev
 PREVIEW_PROFILE=dev
-PREVIEW_REGISTRY=${PREVIEW_REGISTRY:-$HOME/.jarvis/session-bios.tsv}
+PREVIEW_REGISTRY=${PREVIEW_REGISTRY:-$HOME/.local/state/tmux/session-bios.tsv}
 PREVIEW_TABS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/tabs.py"
 
 preview_msg() {
