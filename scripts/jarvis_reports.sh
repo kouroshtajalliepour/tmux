@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# prefix+i: pick reports from ~/.jarvis, newest first, with a preview.
+# prefix+i: pick from ~/.jarvis (reports/, journal/, advise/), newest first,
+# with a preview. Paths are shown relative to the brain.
 # Type to filter. ctrl-space marks rows, alt-a takes everything the filter
 # shows. One report opens normally; several open as one read-only nvim file.
 source "$(dirname "$0")/fzf_common.sh"
@@ -8,9 +9,9 @@ fzf_vim_nav_args " Reports  "
 dir="$HOME/.jarvis"
 combined="${XDG_RUNTIME_DIR:-/tmp}/jarvis-combined.md"
 
-names=$(cd "$dir" 2>/dev/null && ls -1t -- *.md 2>/dev/null)
+names=$(cd "$dir" 2>/dev/null && ls -1t -- reports/*.md journal/*.md advise/*/*.md 2>/dev/null)
 if [ -z "$names" ]; then
-  echo "No reports in $dir"
+  echo "No reports, journal or advice in $dir"
   sleep 1
   exit 0
 fi
